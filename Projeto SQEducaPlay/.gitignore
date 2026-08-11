@@ -1,0 +1,53 @@
+## Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+/build/
+/coverage/
+
+## Generated docs and web artifacts
+doc/api/
+*.dart.js
+*.info.json
+*.js
+*.js_
+*.js.deps
+*.js.map
+
+## Env files
+.env*
+
+## IDE / editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.history
+
+## OS / temp files
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+## Pub / cache
+.pub-cache/
+.pub/
+
+## iOS / Android generated
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+local.properties

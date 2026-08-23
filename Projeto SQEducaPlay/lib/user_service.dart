@@ -1,76 +1,68 @@
 import 'user_model.dart';
+import 'utils/password_utils.dart';
 
 class UserService {
   // Usando um Singleton para manter os dados em memória durante a execução do app.
   static final UserService _instance = UserService._internal();
   factory UserService() => _instance;
-  UserService._internal() {
-    _initializeAdmin();
-  }
+  UserService._internal();
 
   final List<User> _users = [];
   String? _currentUsername;
 
-  // Inicializa com um usuário administrador padrão
-  void _initializeAdmin() {
-    _users.add(User(
-      username: 'Keinan',
-      password: 'keinan',
-      fullName: 'Professor Keinan',
-      role: 'teacher',
-    ));
+void addAdminUser(
+  String username,
+  String password, {
+  String? fullName,
+}) {
+  if (!PasswordUtils.isValidPassword(password)) {
+    throw ArgumentError(
+      'A senha deve ter pelo menos 8 caracteres, '
+      'uma letra e um número.',
+    );
   }
 
-  // Método para adicionar usuário administrador de forma segura
-  void addAdminUser(String username, String password, {String? fullName}) {
-    final normalized = normalizeUsername(username);
-    _users.add(User(
+  final normalized = normalizeUsername(username);
+
+  if (existsUsername(normalized)) {
+    throw ArgumentError('Este nome de usuário já está em uso.');
+  }
+
+  _users.add(
+    User(
       username: normalized,
-      password: password,
+      password: PasswordUtils.hashPassword(password),
       fullName: fullName ?? normalized,
       role: 'admin',
-    ));
-  }
+    ),
+  );
+}
 
-  // Tenta fazer o login e retorna o usuário se for bem-sucedido
-  User? login(String username, String password) {
-    try {
-      return _users.firstWhere(
-        (user) => user.username == username && user.password == password,
-      );
-    } catch (e) {
-      return null; // Retorna nulo se o usuário não for encontrado
-    }
+User? login(String username, String password) {
+  try {
+    return _users.firstWhere(
+      (user) =>
+          user.username.toLowerCase() == username.trim().toLowerCase() &&
+          PasswordUtils.verifyPassword(password, user.password),
+    );
+  } catch (_) {
+    return null;
   }
+}
 
   // Cadastra um novo usuário com validações básicas
   void register(User newUser) {
     final normalized = normalizeUsername(newUser.username);
 
-    final validationError = validateUsername(normalized);
-    if (validationError != null) {
-      throw ArgumentError(validationError);
-    }
-
-    // Impede cadastro de estudante sem escola informada
-    if (newUser.role == 'student' && (newUser.schoolId == null || newUser.schoolId!.isEmpty)) {
-      throw ArgumentError('Para criar conta de aluno, selecione a escola.');
-    }
-
-    // Valida nome completo
-    if (newUser.fullName.trim().isEmpty) {
-      throw ArgumentError('Informe seu nome completo.');
-    }
-
-    // Impede cadastro de usernames duplicados (case-insensitive)
-    final exists = _users.any((u) => u.username.toLowerCase() == normalized.toLowerCase());
-    if (exists) {
-      throw ArgumentError('Este nome de usuário já está em uso.');
-    }
-
+    if (!PasswordUtils.isValidPassword(newUser.password)) {
+  throw ArgumentError(
+    'A senha deve ter pelo menos 8 caracteres, '
+    'uma letra e um número.',
+  );
+}
     _users.add(User(
       username: normalized,
-      password: newUser.password,
+      password: PasswordUtils.hashPassword(newUser.password),
       fullName: newUser.fullName.trim(),
       nickname: newUser.nickname,
       profilePhotoPath: newUser.profilePhotoPath,

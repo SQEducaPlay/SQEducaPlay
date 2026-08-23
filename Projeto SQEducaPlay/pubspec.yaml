@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  crypto: ^3.0.6
   audioplayers: ^6.5.1
   shared_preferences: ^2.3.2
   confetti: ^0.8.0

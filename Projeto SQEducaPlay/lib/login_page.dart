@@ -1,4 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'materias_page.dart';
@@ -21,26 +20,166 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+
   final _userService = UserService();
+
   bool _obscurePassword = true;
+  bool _salvarSenha = false;
+
+  // true = professor
+  // false = aluno
+  bool _modoProfessor = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarLoginSalvo();
+  }
 
   String _canonicalGrade(String? grade) {
     final value = grade?.trim();
-    if (value == null || value.isEmpty) return '2º Ano Fundamental';
-    if (value.endsWith('Fundamental')) return value;
+
+    if (value == null || value.isEmpty) {
+      return '2º Ano Fundamental';
+    }
+
+    if (value.endsWith('Fundamental')) {
+      return value;
+    }
+
     return '$value Fundamental';
   }
 
-  void _login() async {
-    final username = _usernameController.text;
-    final password = _passwordController.text;
+  Future<void> _carregarLoginSalvo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    User? user = _userService.login(username, password);
+      final perfilSalvo =
+          prefs.getString('perfil_login') ?? 'professor';
+
+      final salvarSenha =
+          prefs.getBool('salvar_senha_$perfilSalvo') ?? false;
+
+      if (!salvarSenha) return;
+
+      final username =
+          prefs.getString('login_usuario_$perfilSalvo') ?? '';
+
+      final password =
+          prefs.getString('login_senha_$perfilSalvo') ?? '';
+
+      if (!mounted) return;
+
+      setState(() {
+        _modoProfessor = perfilSalvo == 'professor';
+        _salvarSenha = true;
+        _usernameController.text = username;
+        _passwordController.text = password;
+      });
+    } catch (e) {
+      Logger.d('Erro ao carregar login salvo: $e');
+    }
+  }
+
+  Future<void> _salvarLogin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final perfil =
+          _modoProfessor ? 'professor' : 'aluno';
+
+      if (_salvarSenha) {
+        await prefs.setBool(
+          'salvar_senha_$perfil',
+          true,
+        );
+
+        await prefs.setString(
+          'login_usuario_$perfil',
+          _usernameController.text.trim(),
+        );
+
+        await prefs.setString(
+          'login_senha_$perfil',
+          _passwordController.text,
+        );
+
+        await prefs.setString(
+          'perfil_login',
+          perfil,
+        );
+      } else {
+        await prefs.setBool(
+          'salvar_senha_$perfil',
+          false,
+        );
+
+        await prefs.remove(
+          'login_usuario_$perfil',
+        );
+
+        await prefs.remove(
+          'login_senha_$perfil',
+        );
+      }
+    } catch (e) {
+      Logger.d('Erro ao salvar login: $e');
+    }
+  }
+
+  Future<void> _trocarPerfil() async {
+    setState(() {
+      _modoProfessor = !_modoProfessor;
+      _usernameController.clear();
+      _passwordController.clear();
+      _salvarSenha = false;
+      _obscurePassword = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString(
+        'perfil_login',
+        _modoProfessor ? 'professor' : 'aluno',
+      );
+
+      await _carregarLoginSalvo();
+    } catch (e) {
+      Logger.d('Erro ao trocar perfil: $e');
+    }
+  }
+
+  void _login() async {
+    final username =
+        _usernameController.text.trim();
+
+    final password =
+        _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Informe o usuário e a senha.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    User? user =
+        _userService.login(username, password);
 
     if (user == null) {
       try {
-        final dbUser = await AppDatabase.instance.getUserByUsername(username);
-        if (dbUser != null && dbUser.password == password) {
+        final dbUser =
+            await AppDatabase.instance
+                .getUserByUsername(username);
+
+        if (dbUser != null &&
+            dbUser.password == password) {
           final memUser = User(
             username: dbUser.username,
             password: dbUser.password,
@@ -49,57 +188,147 @@ class _LoginPageState extends State<LoginPage> {
             grade: dbUser.grade,
             classGroup: dbUser.classGroup,
             schoolId: dbUser.schoolId,
+            profilePhotoPath: dbUser.profilePhotoPath,
             role: dbUser.role,
           );
+
           _userService.addUserFromDb(memUser);
+
           user = memUser;
         }
       } catch (e) {
-        Logger.d('Erro ao buscar usuário no DB: $e');
+        Logger.d(
+          'Erro ao buscar usuário no DB: $e',
+        );
       }
     }
 
-    if (user != null) {
-      final loggedUser = _normalizeLoggedUser(user);
-      await _salvarSessaoDoUsuario(loggedUser);
-      _userService.addUserFromDb(loggedUser);
-      _userService.setCurrentUser(loggedUser);
-      await ProgressoService().carregarDoBanco();
-
-      if (!mounted) return;
-
-      if (loggedUser.role == 'teacher') {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ProfessorDashboardPage(username: loggedUser.username),
-          ),
-        );
-      } else if (loggedUser.role == 'admin') {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        final ano = _canonicalGrade(loggedUser.grade ?? prefs.getString('usuario_grade'));
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => MateriasPage(ano: ano, username: loggedUser.username),
-          ),
-        );
-      }
-    } else {
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuário ou senha inválidos!')),
+        const SnackBar(
+          content: Text(
+            'Usuário ou senha inválidos!',
+          ),
+        ),
       );
+
+      return;
     }
+
+    final loggedUser =
+        _normalizeLoggedUser(user);
+
+    // Se está no modo professor,
+    // o usuário precisa ser professor.
+    if (_modoProfessor &&
+        loggedUser.role != 'teacher') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Esta conta não possui acesso de professor.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    // Se está no modo aluno,
+    // não permite professor entrar como aluno.
+    if (!_modoProfessor &&
+        loggedUser.role == 'teacher') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Esta é uma conta de professor. '
+            'Troque o perfil para acessar.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    await _salvarLogin();
+
+    await _salvarSessaoDoUsuario(
+      loggedUser,
+    );
+
+    _userService.addUserFromDb(
+      loggedUser,
+    );
+
+    _userService.setCurrentUser(
+      loggedUser,
+    );
+
+    await ProgressoService()
+        .carregarDoBanco();
+
+    if (!mounted) return;
+
+    // PROFESSOR
+    if (loggedUser.role == 'teacher') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) =>
+              ProfessorDashboardPage(
+            username: loggedUser.username,
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    // ADMINISTRADOR
+    if (loggedUser.role == 'admin') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => HomePage(),
+        ),
+      );
+
+      return;
+    }
+
+    // ALUNO
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final ano = _canonicalGrade(
+      loggedUser.grade ??
+          prefs.getString('usuario_grade'),
+    );
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) =>
+            MateriasPage(
+          ano: ano,
+          username: loggedUser.username,
+        ),
+      ),
+    );
   }
 
   User _normalizeLoggedUser(User user) {
-    final isTeacherKeinan = user.username.toLowerCase() == 'keinan';
-    if (!isTeacherKeinan && user.role != 'teacher') return user;
+    final isTeacherKeinan =
+        user.username.toLowerCase() == 'keinan';
+
+    if (!isTeacherKeinan &&
+        user.role != 'teacher') {
+      return user;
+    }
 
     return User(
       username: user.username,
       password: user.password,
-      fullName: user.fullName.trim().isEmpty ? 'Professor Keinan' : user.fullName,
+      fullName:
+          user.fullName.trim().isEmpty
+              ? 'Professor Keinan'
+              : user.fullName,
       nickname: user.nickname,
       grade: user.grade,
       classGroup: user.classGroup,
@@ -109,38 +338,81 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _salvarSessaoDoUsuario(User user) async {
+  Future<void> _salvarSessaoDoUsuario(
+    User user,
+  ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final dbUser = await AppDatabase.instance.getUserByUsername(user.username);
+      final prefs =
+          await SharedPreferences.getInstance();
 
-      if (dbUser != null && dbUser.id != null) {
-        await prefs.setInt('usuario_id', dbUser.id!);
-        await prefs.setString('usuario_nome', dbUser.username);
+      final dbUser =
+          await AppDatabase.instance
+              .getUserByUsername(
+        user.username,
+      );
+
+      if (dbUser != null &&
+          dbUser.id != null) {
+        await prefs.setInt(
+          'usuario_id',
+          dbUser.id!,
+        );
+
+        await prefs.setString(
+          'usuario_nome',
+          dbUser.username,
+        );
+
         if (dbUser.grade != null) {
-          await prefs.setString('usuario_grade', _canonicalGrade(dbUser.grade));
+          await prefs.setString(
+            'usuario_grade',
+            _canonicalGrade(dbUser.grade),
+          );
         }
       } else {
-        await prefs.setString('usuario_nome', user.username);
+        await prefs.setString(
+          'usuario_nome',
+          user.username,
+        );
+
         if (user.grade != null) {
-          await prefs.setString('usuario_grade', _canonicalGrade(user.grade));
+          await prefs.setString(
+            'usuario_grade',
+            _canonicalGrade(user.grade),
+          );
         }
       }
     } catch (e) {
-      Logger.d('Erro ao salvar sessão do usuário: $e');
+      Logger.d(
+        'Erro ao salvar sessão do usuário: $e',
+      );
     }
   }
 
   void _goToRegisterPage() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RegisterPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            const RegisterPage(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     const double lineSpacing = 34.0;
 
+    final titulo = _modoProfessor
+        ? 'Acesso do Professor'
+        : 'Acesso do Aluno';
+
+    final subtitulo = _modoProfessor
+        ? 'Painel de gerenciamento do professor'
+        : 'Área de aprendizagem do aluno';
+
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+      onTap: () =>
+          FocusScope.of(context).unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         body: Stack(
@@ -151,15 +423,20 @@ class _LoginPageState extends State<LoginPage> {
                 fit: BoxFit.cover,
               ),
             ),
+
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 340),
+                    constraints:
+                        const BoxConstraints(
+                      maxWidth: 340,
+                    ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Transform.translate(
                           offset: const Offset(0, -5),
@@ -168,119 +445,314 @@ class _LoginPageState extends State<LoginPage> {
                             height: 205,
                           ),
                         ),
+
                         const SizedBox(height: 5),
+
                         Stack(
-                          alignment: Alignment.topCenter,
+                          alignment:
+                              Alignment.topCenter,
                           children: [
                             Image.asset(
                               'assets/images/caderno.png',
-                              width: MediaQuery.of(context).size.width - 20,
+                              width:
+                                  MediaQuery.of(context)
+                                          .size
+                                          .width -
+                                      20,
                               fit: BoxFit.contain,
                             ),
+
                             Container(
-                              width: (MediaQuery.of(context).size.width - 58) * 0.75,
-                              padding: const EdgeInsets.only(left: 10.0, right: 10.0, top: 48.0),
+                              width:
+                                  (MediaQuery.of(context)
+                                              .size
+                                              .width -
+                                          58) *
+                                      0.75,
+                              padding:
+                                  const EdgeInsets.only(
+                                left: 10,
+                                right: 10,
+                                top: 48,
+                              ),
                               child: Column(
                                 children: [
-                                  // LINHA 1 e 2: Título
                                   SizedBox(
-                                    height: lineSpacing * 2.2,
+                                    height:
+                                        lineSpacing * 2,
                                     child: Center(
                                       child: Text(
-                                        'Bem-vindo ao SQEducaPlay',
-                                        textAlign: TextAlign.center,
+                                        titulo,
+                                        textAlign:
+                                            TextAlign.center,
                                         style: TextStyle(
-                                          color: Colors.blue.shade900,
+                                          color:
+                                              Colors.blue.shade900,
                                           fontSize: 24,
-                                          fontWeight: FontWeight.w900,
-                                          fontFamily: 'Comic Sans MS',
+                                          fontWeight:
+                                              FontWeight.w900,
+                                          fontFamily:
+                                              'Comic Sans MS',
                                         ),
                                       ),
                                     ),
                                   ),
-                                  // LINHA 3: Subtítulo
+
                                   SizedBox(
                                     height: lineSpacing,
-                                    child: const Center(
+                                    child: Center(
                                       child: Padding(
-                                        padding: EdgeInsets.only(top: 13.0),
+                                        padding:
+                                            const EdgeInsets
+                                                .only(
+                                          top: 10,
+                                        ),
                                         child: Text(
-                                          'Aprender é divertido!',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.orange,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
+                                          subtitulo,
+                                          textAlign:
+                                              TextAlign.center,
+                                          style:
+                                              const TextStyle(
+                                            color:
+                                                Colors.orange,
+                                            fontSize: 14,
+                                            fontWeight:
+                                                FontWeight.bold,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 15),
-                                  // LINHA 4: Nome de Usuário (Subiu para cá!)
+
+                                  const SizedBox(
+                                    height: 15,
+                                  ),
+
+                                  // USUÁRIO
                                   SizedBox(
                                     height: lineSpacing,
-                                    child: _buildTextField(
-                                      controller: _usernameController,
-                                      hintText: 'Nome de Usuário',
-                                      icon: Icons.person,
+                                    child:
+                                        _buildTextField(
+                                      controller:
+                                          _usernameController,
+                                      hintText:
+                                          'Nome de Usuário',
+                                      icon:
+                                          Icons.person,
                                     ),
                                   ),
-                                  // LINHA 5: Senha Secreta (Subiu para cá!)
+
+                                  // SENHA
                                   SizedBox(
                                     height: lineSpacing,
-                                    child: _buildTextField(
-                                      controller: _passwordController,
-                                      hintText: 'Senha Secreta',
-                                      icon: Icons.lock,
-                                      isPassword: true,
-                                      obscureText: _obscurePassword,
-                                      onToggleVisibility: () {
+                                    child:
+                                        _buildTextField(
+                                      controller:
+                                          _passwordController,
+                                      hintText:
+                                          'Senha',
+                                      icon:
+                                          Icons.lock,
+                                      isPassword:
+                                          true,
+                                      obscureText:
+                                          _obscurePassword,
+                                      onToggleVisibility:
+                                          () {
                                         setState(() {
-                                          _obscurePassword = !_obscurePassword;
+                                          _obscurePassword =
+                                              !_obscurePassword;
                                         });
                                       },
                                     ),
                                   ),
-                                  // LINHA 6: Botão Entrar (Subiu para cá!)
+
+                                  // SALVAR SENHA
                                   SizedBox(
                                     height: lineSpacing,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2.0),
-                                      child: ElevatedButton(
-                                        onPressed: _login,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.blue,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
+                                    child:
+                                        CheckboxListTile(
+                                      contentPadding:
+                                          EdgeInsets.zero,
+                                      dense: true,
+                                      visualDensity:
+                                          const VisualDensity(
+                                        horizontal: -4,
+                                        vertical: -4,
+                                      ),
+                                      value:
+                                          _salvarSenha,
+                                      onChanged:
+                                          (value) {
+                                        setState(() {
+                                          _salvarSenha =
+                                              value ??
+                                                  false;
+                                        });
+                                      },
+                                      controlAffinity:
+                                          ListTileControlAffinity
+                                              .leading,
+                                      title:
+                                          const Text(
+                                        'Salvar senha',
+                                        style:
+                                            TextStyle(
+                                          color:
+                                              Colors.blue,
+                                          fontSize: 13,
+                                          fontWeight:
+                                              FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // ENTRAR
+                                  SizedBox(
+                                    height: lineSpacing,
+                                    child:
+                                        ElevatedButton(
+                                      onPressed:
+                                          _login,
+                                      style:
+                                          ElevatedButton
+                                              .styleFrom(
+                                        backgroundColor:
+                                            Colors.blue,
+                                        foregroundColor:
+                                            Colors.white,
+                                        padding:
+                                            EdgeInsets.zero,
+                                        shape:
+                                            RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius
+                                                  .circular(
+                                            10,
                                           ),
                                         ),
-                                        child: const Text(
-                                          'Entrar',
-                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                      child:
+                                          const Text(
+                                        'Entrar',
+                                        style:
+                                            TextStyle(
+                                          fontSize: 16,
+                                          fontWeight:
+                                              FontWeight.bold,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  // LINHA 7: Botão Cadastrar (Subiu para cá!)
-                                  SizedBox(
-                                    height: lineSpacing,
-                                    child: TextButton(
-                                      onPressed: _goToRegisterPage,
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.blue.shade900,
-                                        padding: EdgeInsets.zero,
+
+                                  const SizedBox(
+                                    height: 8,
+                                  ),
+
+                                  // TEXTO DO PRIMEIRO ACESSO
+                                  if (_modoProfessor)
+                                    const Text(
+                                      'Configure a conta do professor '
+                                      'antes do primeiro login.',
+                                      textAlign:
+                                          TextAlign.center,
+                                      style: TextStyle(
+                                        color:
+                                            Colors.blue,
+                                        fontSize: 11,
+                                        fontWeight:
+                                            FontWeight.bold,
                                       ),
-                                      child: const Text(
-                                        'Cadastrar novo usuário',
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+
+                                  const SizedBox(
+                                    height: 8,
+                                  ),
+
+                                  // TROCAR PERFIL
+                                  TextButton(
+                                    onPressed:
+                                        _trocarPerfil,
+                                    style:
+                                        TextButton.styleFrom(
+                                      foregroundColor:
+                                          Colors.blue.shade900,
+                                      padding:
+                                          EdgeInsets.zero,
+                                    ),
+                                    child:
+                                        Text(
+                                      _modoProfessor
+                                          ? 'Aluno? Troque o perfil abaixo.'
+                                          : 'Professor? Troque o perfil abaixo.',
+                                      textAlign:
+                                          TextAlign.center,
+                                      style:
+                                          const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight:
+                                            FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                  // LINHA 8: Espaço livre no final
-                                  const SizedBox(height: lineSpacing),
+
+                                  // BOTÃO TROCAR PERFIL
+                                  OutlinedButton(
+                                    onPressed:
+                                        _trocarPerfil,
+                                    style:
+                                        OutlinedButton.styleFrom(
+                                      foregroundColor:
+                                          Colors.blue,
+                                      side:
+                                          const BorderSide(
+                                        color:
+                                            Colors.blue,
+                                      ),
+                                      shape:
+                                          RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius
+                                                .circular(
+                                          10,
+                                        ),
+                                      ),
+                                    ),
+                                    child:
+                                        const Text(
+                                      'Trocar perfil',
+                                      style:
+                                          TextStyle(
+                                        fontWeight:
+                                            FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    height: 8,
+                                  ),
+
+                                  if (!_modoProfessor)
+                                    TextButton(
+                                      onPressed:
+                                          _goToRegisterPage,
+                                      child:
+                                          const Text(
+                                        'Cadastrar novo usuário',
+                                        style:
+                                            TextStyle(
+                                          fontSize: 13,
+                                          fontWeight:
+                                              FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+
+                                  const SizedBox(
+                                    height: lineSpacing,
+                                  ),
                                 ],
                               ),
                             ),
@@ -307,34 +779,64 @@ class _LoginPageState extends State<LoginPage> {
     VoidCallback? onToggleVisibility,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2.0),
+      margin:
+          const EdgeInsets.symmetric(
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius:
+            BorderRadius.circular(8),
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword ? obscureText : false,
-        style: const TextStyle(fontSize: 15, color: Colors.black87),
+        obscureText:
+            isPassword
+                ? obscureText
+                : false,
+        style: const TextStyle(
+          fontSize: 15,
+          color: Colors.black87,
+        ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.blue, fontSize: 15, fontWeight: FontWeight.bold),
-          prefixIcon: Icon(icon, color: Colors.blue, size: 16),
-          suffixIcon: isPassword
-              ? IconButton(
-                  icon: Icon(
-                    obscureText ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.blue,
-                    size: 16,
-                  ),
-                  onPressed: onToggleVisibility,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                )
-              : null,
-          border: InputBorder.none,
+          hintStyle:
+              const TextStyle(
+            color: Colors.blue,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: Colors.blue,
+            size: 16,
+          ),
+          suffixIcon:
+              isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        obscureText
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.blue,
+                        size: 16,
+                      ),
+                      onPressed:
+                          onToggleVisibility,
+                      padding:
+                          EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(),
+                    )
+                  : null,
+          border:
+              InputBorder.none,
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          contentPadding:
+              const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
         ),
       ),
     );

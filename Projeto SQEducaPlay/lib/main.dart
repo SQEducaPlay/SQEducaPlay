@@ -948,3 +948,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: LoginPage(),
+    ),
+  );
+}

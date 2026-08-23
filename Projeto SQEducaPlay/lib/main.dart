@@ -465,21 +465,22 @@ class _LoginPageState extends State<LoginPage> {
                           children: [
                             Image.asset(
                               'assets/images/caderno.png',
-                              width:
-                                  MediaQuery.of(context)
-                                          .size
-                                          .width -
-                                      20,
+                              width: (MediaQuery.of(context)
+                                      .size
+                                      .width -
+                                  20)
+                                  .clamp(0.0, double.infinity),
                               fit: BoxFit.contain,
                             ),
 
                             Container(
                               width:
-                                  (MediaQuery.of(context)
-                                              .size
-                                              .width -
-                                          58) *
-                                      0.75,
+                                  ((MediaQuery.of(context)
+                                        .size
+                                        .width -
+                                      58)
+                                    .clamp(0.0, double.infinity)) *
+                                    0.75,
 
                               // Aumentei um pouco o espaço interno
                               // para evitar cortes.

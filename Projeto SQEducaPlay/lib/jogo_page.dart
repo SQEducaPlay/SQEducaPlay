@@ -1638,11 +1638,15 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     // Extrai a operação da pergunta
     String operation = '';
     
-    // Padrões comuns: "Quanto é 5 + 3?"
-    final match = RegExp(r'(\d+)\s*([+\-×x÷])\s*(\d+)').firstMatch(question);
-    if (match != null) {
-      operation = '${match.group(1)} ${match.group(2)} ${match.group(3)}';
-    }
+    // Extrai a expressão matemática completa, inclusive operações encadeadas.
+// Ex.: "Quanto é 2 + 2 + 2?" -> "2 + 2 + 2"
+final match = RegExp(
+  r'(\d+(?:\s*[+\-×x÷]\s*\d+)+)',
+).firstMatch(question);
+
+if (match != null) {
+  operation = match.group(1)!.trim();
+}
     
     if (operation.isEmpty) return const SizedBox.shrink();
     

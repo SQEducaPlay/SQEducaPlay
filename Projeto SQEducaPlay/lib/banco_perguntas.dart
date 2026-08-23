@@ -49,7 +49,8 @@ class BancoPerguntas {
             'resposta': '25',
           },
           {
-            'pergunta': 'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
+            'pergunta':
+                'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
             'opcoes': ['12', '15', '18', '20'],
             'resposta': '15',
           },
@@ -144,6 +145,7 @@ class BancoPerguntas {
           },
         ],
       },
+
       '3º Ano Fundamental': {
         'Números até 1000': [
           {
@@ -157,8 +159,8 @@ class BancoPerguntas {
             'resposta': '499',
           },
           {
-            'pergunta': 'Quantas dezenas tem o número 780?',
-            'opcoes': ['7', '70', '78', '80'],
+            'pergunta': 'Quantas dezenas completas há no número 780?',
+            'opcoes': ['7', '8', '78', '780'],
             'resposta': '78',
           },
           {
@@ -250,7 +252,8 @@ class BancoPerguntas {
             'resposta': '1/4',
           },
           {
-            'pergunta': 'Se uma pizza tem 8 pedaços e você come 2, que fração você comeu?',
+            'pergunta':
+                'Se uma pizza tem 8 pedaços e você come 2, que fração você comeu?',
             'opcoes': ['1/8', '2/8', '3/8', '4/8'],
             'resposta': '2/8',
           },
@@ -261,6 +264,7 @@ class BancoPerguntas {
           },
         ],
       },
+
       '4º Ano Fundamental': {
         'Números até 10.000': [
           {
@@ -270,7 +274,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Como se lê 7.809?',
-            'opcoes': ['Sete mil e oitenta e nove', 'Setecentos e oitenta e nove', 'Sete mil, oitocentos e nove', 'Setenta e oito mil e nove'],
+            'opcoes': [
+              'Sete mil e oitenta e nove',
+              'Setecentos e oitenta e nove',
+              'Sete mil, oitocentos e nove',
+              'Setenta e oito mil e nove'
+            ],
             'resposta': 'Sete mil, oitocentos e nove',
           },
           {
@@ -348,8 +357,8 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Quanto é 3/4 - 1/4?',
-            'opcoes': ['1/4', '2/4', '3/4', '4/4'],
-            'resposta': '2/4',
+            'opcoes': ['1/4', '1/2', '3/4', '4/4'],
+            'resposta': '1/2',
           },
           {
             'pergunta': 'Quanto é 2/5 + 2/5?',
@@ -380,6 +389,7 @@ class BancoPerguntas {
           },
         ],
       },
+
       '5º Ano Fundamental': {
         'Números e Sistema Decimal': [
           {
@@ -389,7 +399,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Como se escreve por extenso 52.408?',
-            'opcoes': ['Cinquenta e dois mil e quarenta e oito', 'Cinquenta e dois mil, quatrocentos e oito', 'Cinco mil, duzentos e quarenta e oito', 'Quinhentos e vinte e quatro mil e oito'],
+            'opcoes': [
+              'Cinquenta e dois mil e quarenta e oito',
+              'Cinquenta e dois mil, quatrocentos e oito',
+              'Cinco mil, duzentos e quarenta e oito',
+              'Quinhentos e vinte e quatro mil e oito'
+            ],
             'resposta': 'Cinquenta e dois mil, quatrocentos e oito',
           },
           {
@@ -400,14 +415,14 @@ class BancoPerguntas {
         ],
         'Operações com Decimais': [
           {
-            'pergunta': 'Quanto é 3.5 + 2.8?',
-            'opcoes': ['5.9', '6.1', '6.3', '6.5'],
-            'resposta': '6.3',
+            'pergunta': 'Quanto é 3,5 + 2,8?',
+            'opcoes': ['5,9', '6,1', '6,3', '6,5'],
+            'resposta': '6,3',
           },
           {
-            'pergunta': 'Quanto é 12.0 - 4.75?',
-            'opcoes': ['6.95', '7.15', '7.25', '7.35'],
-            'resposta': '7.25',
+            'pergunta': 'Quanto é 12,0 - 4,75?',
+            'opcoes': ['6,95', '7,15', '7,25', '7,35'],
+            'resposta': '7,25',
           },
           {
             'pergunta': 'Qual é o valor de 4,2 + 3,75?',
@@ -493,7 +508,8 @@ class BancoPerguntas {
             'resposta': '40',
           },
           {
-            'pergunta': 'Qual é o perímetro de um triângulo com lados 5, 6 e 7?',
+            'pergunta':
+                'Qual é o perímetro de um triângulo com lados 5, 6 e 7?',
             'opcoes': ['16', '17', '18', '19'],
             'resposta': '18',
           },
@@ -510,21 +526,24 @@ class BancoPerguntas {
         ],
       },
     },
+
     'Português': {
       '2º Ano Fundamental': {
-  'Leitura/escuta e interpretação': [
+        'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'Em um poema, palavras que têm sons parecidos no final chamam-se:',
+            'pergunta':
+                'Em um poema, palavras que têm sons parecidos no final chamam-se:',
             'opcoes': ['Rimas', 'Versos', 'Estrofes', 'Títulos'],
             'resposta': 'Rimas',
           },
           {
             'pergunta': 'Qual palavra rima com "GATO"?',
-            'opcoes': ['RATO', 'BOLA', 'CASA', 'PATO'],
+            'opcoes': ['RATO', 'BOLA', 'CASA', 'LIVRO'],
             'resposta': 'RATO',
           },
           {
-            'pergunta': 'Se Maria comeu uma maçã no lanche, o que ela fez?',
+            'pergunta':
+                'Se Maria comeu uma maçã no lanche, o que ela fez?',
             'opcoes': ['Jogou fora', 'Comeu', 'Comprou', 'Guardou'],
             'resposta': 'Comeu',
           },
@@ -539,12 +558,13 @@ class BancoPerguntas {
             'resposta': 'Deixar recado',
           },
           {
-            'pergunta': 'Em qual tipo de texto encontramos uma lição moral no final?',
+            'pergunta':
+                'Em qual tipo de texto encontramos uma lição moral no final?',
             'opcoes': ['Bilhete', 'Fábula', 'Carta', 'Lista'],
             'resposta': 'Fábula',
           },
         ],
-  'Análise linguística/semiótica (ortografia e pontuação)': [
+        'Análise linguística/semiótica (ortografia e pontuação)': [
           {
             'pergunta': 'Qual palavra usa o dígrafo CH?',
             'opcoes': ['Carro', 'Chocolate', 'Sapato', 'Mesa'],
@@ -557,13 +577,13 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Qual palavra usa o dígrafo LH?',
-            'opcoes': ['Palha', 'Pala', 'Pato', 'Pala'],
+            'opcoes': ['Palha', 'Pala', 'Pato', 'Bola'],
             'resposta': 'Palha',
           },
           {
-            'pergunta': 'Usamos M antes de qual letra?',
-            'opcoes': ['A', 'P', 'S', 'T'],
-            'resposta': 'P',
+            'pergunta': 'Usamos M antes de quais letras?',
+            'opcoes': ['P e B', 'T e D', 'C e G', 'L e R'],
+            'resposta': 'P e B',
           },
           {
             'pergunta': 'Qual sinal usamos no final de uma pergunta?',
@@ -577,11 +597,11 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Qual é o plural de "mão"?',
-            'opcoes': ['Mãos', 'Maos', 'Mães', 'Mães'],
+            'opcoes': ['Mãos', 'Mãoes', 'Mães', 'Mão'],
             'resposta': 'Mãos',
           },
         ],
-  'Análise linguística/semiótica (vocabulário)': [
+        'Análise linguística/semiótica (vocabulário)': [
           {
             'pergunta': 'O que é o contrário de "alto"?',
             'opcoes': ['Baixo', 'Grande', 'Pequeno', 'Gordo'],
@@ -609,6 +629,7 @@ class BancoPerguntas {
           },
         ],
       },
+
       '3º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
@@ -617,13 +638,20 @@ class BancoPerguntas {
             'resposta': 'O gato',
           },
           {
-            'pergunta': 'Se "Ana levou um guarda-chuva", o tempo provavelmente estava:',
+            'pergunta':
+                'Se "Ana levou um guarda-chuva", o que podemos supor sobre o tempo?',
             'opcoes': ['Ensolarado', 'Chuvoso', 'Nevando', 'Seco'],
             'resposta': 'Chuvoso',
           },
           {
-            'pergunta': 'Qual é a ideia principal de "Pedro comeu uma maçã no lanche"?',
-            'opcoes': ['Pedro comprou uma maçã', 'Pedro comeu uma maçã', 'Pedro guardou a maçã', 'Pedro jogou a maçã'],
+            'pergunta':
+                'Qual é a ideia principal de "Pedro comeu uma maçã no lanche"?',
+            'opcoes': [
+              'Pedro comprou uma maçã',
+              'Pedro comeu uma maçã',
+              'Pedro guardou a maçã',
+              'Pedro jogou a maçã'
+            ],
             'resposta': 'Pedro comeu uma maçã',
           },
           {
@@ -633,11 +661,16 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Qual a função de um texto instrucional?',
-            'opcoes': ['Ensinar fazer algo', 'Contar história', 'Vender produto', 'Fazer piada'],
-            'resposta': 'Ensinar fazer algo',
+            'opcoes': [
+              'Ensinar a fazer algo',
+              'Contar história',
+              'Vender produto',
+              'Fazer piada'
+            ],
+            'resposta': 'Ensinar a fazer algo',
           },
         ],
-  'Análise linguística/semiótica (ortografia)': [
+        'Análise linguística/semiótica (ortografia)': [
           {
             'pergunta': 'Qual palavra está escrita corretamente?',
             'opcoes': ['Exenplo', 'Exemplo', 'Ezemplo', 'Exsemplo'],
@@ -669,16 +702,28 @@ class BancoPerguntas {
             'resposta': 'Cabeça',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
-            'pergunta': 'Para começar um texto narrativo, usamos:',
-            'opcoes': ['Era uma vez', 'Em conclusão', 'Por isso', 'Finalmente'],
+            'pergunta':
+                'Qual expressão é muito usada para iniciar uma história?',
+            'opcoes': [
+              'Era uma vez',
+              'Em conclusão',
+              'Por isso',
+              'Finalmente'
+            ],
             'resposta': 'Era uma vez',
           },
           {
-            'pergunta': 'Um parágrafo começa com:',
-            'opcoes': ['Vírgula', 'Ponto final', 'Espaço maior', 'Letra minúscula'],
-            'resposta': 'Espaço maior',
+            'pergunta':
+                'Como geralmente indicamos o início de um novo parágrafo?',
+            'opcoes': [
+              'Com um recuo',
+              'Com uma vírgula',
+              'Com um ponto final',
+              'Com uma letra minúscula'
+            ],
+            'resposta': 'Com um recuo',
           },
           {
             'pergunta': 'Qual sinal usamos para separar itens de uma lista?',
@@ -692,21 +737,35 @@ class BancoPerguntas {
           },
         ],
       },
+
       '4º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'Em "O time venceu porque treinou muito", qual é a causa da vitória?',
-            'opcoes': ['O time venceu', 'Treinou muito', 'O time perdeu', 'Não treinou'],
+            'pergunta':
+                'Em "O time venceu porque treinou muito", qual é a causa da vitória?',
+            'opcoes': [
+              'O time venceu',
+              'Treinou muito',
+              'O time perdeu',
+              'Não treinou'
+            ],
             'resposta': 'Treinou muito',
           },
           {
-            'pergunta': 'Na frase "Embora estivesse cansado, João estudou", a conjunção indica:',
+            'pergunta':
+                'Na frase "Embora estivesse cansado, João estudou", a conjunção indica:',
             'opcoes': ['Causa', 'Concessão', 'Conclusão', 'Comparação'],
             'resposta': 'Concessão',
           },
           {
-            'pergunta': 'O que conclui a frase: "Carla levou casaco e guarda-chuva, então..."',
-            'opcoes': ['Está calor', 'Vai chover', 'Vai nevar', 'Está seco'],
+            'pergunta':
+                'Se a previsão do tempo indica chuva, o que provavelmente acontecerá?',
+            'opcoes': [
+              'Vai chover',
+              'Vai nevar',
+              'Fará muito calor',
+              'O céu ficará sempre limpo'
+            ],
             'resposta': 'Vai chover',
           },
           {
@@ -725,7 +784,7 @@ class BancoPerguntas {
             'resposta': 'A lição aprendida',
           },
         ],
-  'Análise linguística/semiótica (ortografia)': [
+        'Análise linguística/semiótica (ortografia)': [
           {
             'pergunta': 'Qual palavra usa "Ç"?',
             'opcoes': ['Camiseta', 'Coração', 'Cavalo', 'Carro'],
@@ -757,10 +816,15 @@ class BancoPerguntas {
             'resposta': 'à',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
             'pergunta': 'Em um texto argumentativo, devemos:',
-            'opcoes': ['Defender uma ideia', 'Contar piada', 'Fazer lista', 'Desenhar'],
+            'opcoes': [
+              'Defender uma ideia',
+              'Contar piada',
+              'Fazer lista',
+              'Desenhar'
+            ],
             'resposta': 'Defender uma ideia',
           },
           {
@@ -770,32 +834,56 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Para dar sequência às ideias, usamos:',
-            'opcoes': ['Palavras soltas', 'Conectivos', 'Números', 'Desenhos'],
+            'opcoes': [
+              'Palavras soltas',
+              'Conectivos',
+              'Números',
+              'Desenhos'
+            ],
             'resposta': 'Conectivos',
           },
           {
             'pergunta': 'O que é um texto instrucional?',
-            'opcoes': ['Ensina fazer algo', 'Conta história', 'Dá notícia', 'Faz propaganda'],
-            'resposta': 'Ensina fazer algo',
+            'opcoes': [
+              'Ensina a fazer algo',
+              'Conta história',
+              'Dá notícia',
+              'Faz propaganda'
+            ],
+            'resposta': 'Ensina a fazer algo',
           },
         ],
       },
+
       '5º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'No trecho "A leitura amplia o conhecimento", qual é o efeito apresentado?',
+            'pergunta':
+                'No trecho "A leitura amplia o conhecimento", qual é o efeito apresentado?',
             'opcoes': ['Causa', 'Amplia conhecimento', 'Tempo', 'Lugar'],
             'resposta': 'Amplia conhecimento',
           },
           {
-            'pergunta': 'O que melhor resume: "Após estudar, Lucas resolveu o problema com facilidade"?',
-            'opcoes': ['Lucas não estudou', 'Estudar ajudou Lucas', 'O problema era impossível', 'Lucas adivinhou'],
+            'pergunta':
+                'O que melhor resume: "Após estudar, Lucas resolveu o problema com facilidade"?',
+            'opcoes': [
+              'Lucas não estudou',
+              'Estudar ajudou Lucas',
+              'O problema era impossível',
+              'Lucas adivinhou'
+            ],
             'resposta': 'Estudar ajudou Lucas',
           },
           {
-            'pergunta': 'Em "Se houvesse silêncio, a concentração aumentaria", qual relação há entre as orações?',
-            'opcoes': ['Causa e efeito', 'Comparação', 'Exemplificação', 'Conclusão'],
-            'resposta': 'Causa e efeito',
+            'pergunta':
+                'Em "Se houvesse silêncio, a concentração aumentaria", qual relação há entre as orações?',
+            'opcoes': [
+              'Condição',
+              'Comparação',
+              'Exemplificação',
+              'Conclusão'
+            ],
+            'resposta': 'Condição',
           },
           {
             'pergunta': 'Em "A lua é um queijo", temos uma:',
@@ -803,25 +891,46 @@ class BancoPerguntas {
             'resposta': 'Metáfora',
           },
           {
-            'pergunta': 'O que é discurso direto?',
-            'opcoes': ['Narrador conta', 'Personagem fala', 'Descrição', 'Conclusão'],
-            'resposta': 'Personagem fala',
+            'pergunta': 'O que caracteriza o discurso direto?',
+            'opcoes': [
+              'A reprodução direta da fala de um personagem',
+              'O narrador contando toda a história',
+              'A descrição de um lugar',
+              'A conclusão de uma história'
+            ],
+            'resposta':
+                'A reprodução direta da fala de um personagem',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
             'pergunta': 'Em uma carta formal, devemos usar:',
-            'opcoes': ['Gírias', 'Linguagem culta', 'Desenhos', 'Abreviações'],
+            'opcoes': [
+              'Gírias',
+              'Linguagem culta',
+              'Desenhos',
+              'Abreviações'
+            ],
             'resposta': 'Linguagem culta',
           },
           {
             'pergunta': 'O que caracteriza um texto expositivo?',
-            'opcoes': ['Apresenta informações', 'Conta história', 'Diverte', 'Vende produto'],
+            'opcoes': [
+              'Apresenta informações',
+              'Conta história',
+              'Diverte',
+              'Vende produto'
+            ],
             'resposta': 'Apresenta informações',
           },
           {
             'pergunta': 'Em um debate, é importante:',
-            'opcoes': ['Gritar', 'Argumentar com respeito', 'Interromper', 'Brigar'],
+            'opcoes': [
+              'Gritar',
+              'Argumentar com respeito',
+              'Interromper',
+              'Brigar'
+            ],
             'resposta': 'Argumentar com respeito',
           },
           {
@@ -846,14 +955,17 @@ class BancoPerguntas {
     if (topico == null || topico.isEmpty) {
       var todasPerguntas = <Map<String, dynamic>>[];
       var materiaData = perguntas[materia];
+
       if (materiaData != null) {
         var anoData = materiaData[anoNormalizado];
+
         if (anoData != null) {
           anoData.forEach((_, perguntasTopico) {
             todasPerguntas.addAll(perguntasTopico);
           });
         }
       }
+
       return todasPerguntas;
     }
 

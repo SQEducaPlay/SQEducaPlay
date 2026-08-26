@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "br.com.sqeducaplay.sqeducaplay"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,8 +33,9 @@ android {
         applicationId = "br.com.sqeducaplay.sqeducaplay"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // API 36 obrigatória para novos apps/atualizações a partir de 31/08/2026.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -71,6 +72,7 @@ flutter {
 }
 
 dependencies {
-    // Necessário para referências do Flutter a Play Store Split/Deferred Components durante minificação (R8)
-    implementation("com.google.android.play:core:1.10.3")
+    // play:core foi substituído por play:core-ktx e review/app-update separados.
+    // Mantido apenas para compatibilidade com R8 durante minificação do Flutter.
+    implementation("com.google.android.play:core-ktx:1.8.1")
 }

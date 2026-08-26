@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../database/app_database.dart';
+import '../pages/access_choice_page.dart';
 import '../services/privacy_settings_service.dart';
+import '../services/user_service.dart';
 import '../widgets/app_bar.dart';
 
 class PrivacySettingsPage extends StatefulWidget {
@@ -11,6 +14,51 @@ class PrivacySettingsPage extends StatefulWidget {
 
 class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   final privacy = PrivacySettingsService();
+
+  Future<void> _confirmarExclusaoConta() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar conta?'),
+        content: const Text(
+          'Todos os seus dados serão removidos permanentemente: '
+          'progresso, partidas, conquistas, ranking e foto. '
+          '\n\nEsta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Apagar tudo'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final user = UserService().currentUser;
+    if (user?.id == null) return;
+
+    final ok = await AppDatabase.instance.deleteCurrentUserAccount(user!.id!);
+    if (!mounted) return;
+
+    if (ok) {
+      await UserService().logout();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AccessChoicePage()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível apagar a conta. Tente novamente.')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -91,6 +139,28 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           ),
           const SizedBox(height: 24),
           const Text('Dica: você pode ajustar essas preferências a qualquer momento.'),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 8),
+          const Text(
+            'Exclusão de conta',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Apaga permanentemente sua conta e todos os dados associados: '
+            'progresso, partidas, conquistas, ranking e foto de perfil. '
+            'Esta ação não pode ser desfeita.',
+            style: TextStyle(color: Colors.black54, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.delete_forever, color: Colors.red),
+            label: const Text('Apagar minha conta e dados', style: TextStyle(color: Colors.red)),
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+            onPressed: _confirmarExclusaoConta,
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

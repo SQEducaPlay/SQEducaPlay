@@ -92,68 +92,77 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _register() async {
-    if (_formKey.currentState!.validate()) {
-      if (!_guardianConsent) {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (!_guardianConsent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O responsável precisa aceitar o termo de uso dos dados.')),
+      );
+      return;
+    }
+
+    // P0-02: verificar unicidade no banco ANTES de qualquer alteração em memória.
+    final normalizedUsername = _userService.normalizeUsername(_usernameController.text);
+    try {
+      final existingInDb = await AppDatabase.instance.getUserByUsername(normalizedUsername);
+      if (existingInDb != null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('O responsável precisa aceitar o termo de uso dos dados.')),
+          const SnackBar(content: Text('Este nome de usuário já está em uso.')),
         );
         return;
       }
-      try {
-        final newUser = User(
-          username: _usernameController.text,
-          password: _passwordController.text,
-          fullName: _fullNameController.text.trim(),
-          nickname: _nicknameController.text.trim().isEmpty ? null : _nicknameController.text.trim(),
-          profilePhotoPath: _pickedImage?.path,
-          grade: _canonicalGrade(_selectedSerie),
-          classGroup: _resolveClassGroupName(),
-          schoolId: _selectedSchool?.id,
-          guardianName: _guardianNameController.text.trim(),
-          consentAt: DateTime.now(),
-          consentVersion: _consentVersion,
-          role: 'student',
-        );
-        _userService.register(newUser);
+    } catch (e) {
+      Logger.d('Erro ao verificar unicidade no banco: $e');
+    }
 
-        // Também criar usuário no banco (AppDatabase) e persistir série em SharedPreferences
-        try {
-          // Buscar por username no DB (case-insensitive)
-          final existing = await AppDatabase.instance.getUserByUsername(_usernameController.text);
-          late User created;
-          if (existing == null) {
-            created = await AppDatabase.instance.createUser(newUser);
-            Logger.d('Usuário criado no DB com ID: ${created.id}');
-          } else {
-            created = existing;
-            Logger.d('Usuário já existente no DB: ${existing.username} (ID: ${existing.id})');
-          }
+    try {
+      final newUser = User(
+        username: normalizedUsername,
+        password: _passwordController.text,
+        fullName: _fullNameController.text.trim(),
+        nickname: _nicknameController.text.trim().isEmpty ? null : _nicknameController.text.trim(),
+        profilePhotoPath: _pickedImage?.path,
+        grade: _canonicalGrade(_selectedSerie),
+        classGroup: _resolveClassGroupName(),
+        schoolId: _selectedSchool?.id,
+        guardianName: _guardianNameController.text.trim(),
+        consentAt: DateTime.now(),
+        consentVersion: _consentVersion,
+        role: 'student',
+      );
 
-          // Salvar prefs para fluxo de login
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            if (created.id != null) await prefs.setInt('usuario_id', created.id!);
-            await prefs.setString('usuario_nome', created.username);
-            if (created.grade != null) await prefs.setString('usuario_grade', _canonicalGrade(created.grade));
-          } catch (e) {
-            Logger.d('Erro ao salvar SharedPreferences após cadastro: $e');
-          }
-        } catch (e) {
-          Logger.d('Erro ao criar usuário no banco: $e');
-        }
+      // Cria no banco primeiro (fonte da verdade); só depois atualiza memória.
+      final created = await AppDatabase.instance.createUser(newUser);
+      Logger.d('Usuário criado no DB com ID: ${created.id}');
 
-        if (!mounted) return;
+      // Registra em memória somente após gravação no banco.
+      _userService.register(newUser);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário cadastrado com sucesso!')),
-        );
-
-        Navigator.of(context).pop(); // Volta para a tela de login
-      } on ArgumentError catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message.toString())),
-        );
+      // Persistir sessão nas preferências.
+      final prefs = await SharedPreferences.getInstance();
+      if (created.id != null) await prefs.setInt('usuario_id', created.id!);
+      await prefs.setString('usuario_nome', created.username);
+      if (created.grade != null) {
+        await prefs.setString('usuario_grade', _canonicalGrade(created.grade));
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuário cadastrado com sucesso!')),
+      );
+      Navigator.of(context).pop();
+    } on ArgumentError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message.toString())),
+      );
+    } catch (e) {
+      Logger.d('Erro ao criar usuário: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao criar conta. Tente novamente.')),
+      );
     }
   }
 

@@ -4,8 +4,10 @@ import 'models/conquista_model.dart';
 import 'models/progresso_model.dart';
 import 'models/user_model.dart';
 // Firebase removed — feature deferred
+import 'manage_schools_page.dart';
 import 'materias_page.dart';
 import 'pages/access_choice_page.dart';
+import 'pages/admin_teacher_invites_page.dart';
 import 'pages/perfil_aluno_page.dart';
 import 'pages/ranking_database_page.dart';
 import 'pages/privacy_settings_page.dart';
@@ -115,6 +117,28 @@ class _HomePageState extends State<HomePage> {
       appBar: AppTopBar(
         title: 'SQEducaPlay 📚',
         actions: [
+          if (_user?.role == 'admin') ...[
+            IconButton(
+              icon: const Icon(Icons.school_outlined),
+              tooltip: 'Gerenciar escolas',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ManageSchoolsPage()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_moderator_outlined),
+              tooltip: 'Convites de educador',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminTeacherInvitesPage()),
+                );
+              },
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.privacy_tip_outlined),
             tooltip: 'Privacidade (LGPD)',
@@ -151,8 +175,9 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
-            onPressed: () {
-              UserService().clearCurrentUser();
+            onPressed: () async {
+              await UserService().logout();
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const AccessChoicePage()),
                 (route) => false,

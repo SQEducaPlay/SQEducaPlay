@@ -645,6 +645,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   bool _ttsEnabled = true;
   double _speechRate = 0.45; // velocidade do TTS (lenta por padrão)
   List<bool?> _progresso = []; // null = não respondida, true = acerto, false = erro
+  List<String> _respostasUsuario = []; // resposta selecionada por pergunta
   int acertosConsecutivos = 0; // para avatar emocional
   String? _feedbackMsg; // mensagem curta de feedback
   Color _feedbackColor = Colors.transparent;
@@ -660,6 +661,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     WidgetsBinding.instance.addObserver(this);
     perguntas = _gerarPerguntas(widget.ano, widget.materia, widget.topico);
   _progresso = List<bool?>.filled(perguntas.length, null);
+    _respostasUsuario = List<String>.filled(perguntas.length, '');
     
     _confettiController = AnimationController(
       duration: const Duration(seconds: 3),
@@ -1505,6 +1507,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
       respondeu = true;
       acertou = respostaCorreta;
       _progresso[perguntaAtual] = respostaCorreta;
+      _respostasUsuario[perguntaAtual] = respostaSelecionada;
       if (respostaCorreta) {
         acertosConsecutivos++;
         _feedbackMsg = 'Muito bem! 😀';
@@ -1889,7 +1892,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
 
       final totalAcertos = _progresso.where((acertou) => acertou == true).length;
 
-      await AppDatabase.instance.salvarPartida({
+      final partidaId = await AppDatabase.instance.salvarPartida({
         'usuario_id': usuarioId,
         'materia': widget.materia,
         'ano': widget.ano,
@@ -1898,9 +1901,33 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         'estrelas': estrelas,
         'acertos': totalAcertos,
         'total_perguntas': perguntas.length,
-        'tempo_segundos': null, // Pode adicionar um timer se quiser
+        'tempo_segundos': null,
         'data_partida': DateTime.now().toIso8601String(),
       });
+
+      // Seção 5.6: salvar tentativas por questão para diagnóstico do professor.
+      final tentativas = <Map<String, dynamic>>[];
+      for (var i = 0; i < perguntas.length; i++) {
+        if (_progresso[i] == null) continue;
+        tentativas.add({
+          'pergunta': perguntas[i]['pergunta']?.toString() ?? '',
+          'resposta_selecionada': _respostasUsuario.length > i ? _respostasUsuario[i] : '',
+          'resposta_correta': perguntas[i]['resposta']?.toString() ?? '',
+          'acertou': _progresso[i] == true,
+          'ordem_pergunta': i,
+          'data_tentativa': DateTime.now().toIso8601String(),
+        });
+      }
+      if (tentativas.isNotEmpty) {
+        await AppDatabase.instance.salvarTentativasPartida(
+          usuarioId: usuarioId,
+          partidaId: partidaId,
+          materia: widget.materia,
+          ano: widget.ano,
+          topico: widget.topico,
+          tentativas: tentativas,
+        );
+      }
 
       final username = UserService().currentUser?.username;
       if (username != null && widget.topico != null) {

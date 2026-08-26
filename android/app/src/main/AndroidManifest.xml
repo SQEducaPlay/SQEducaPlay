@@ -1,9 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permissões necessárias para seleção/uso de câmera e imagens -->
+    <!-- CAMERA: necessária apenas para captura direta pela câmera no cadastro de perfil.
+         READ_EXTERNAL_STORAGE e READ_MEDIA_IMAGES foram removidos; o app usa o
+         Android Photo Picker (MediaStore) que não requer permissão de armazenamento. -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <!-- Android 13+ usa READ_MEDIA_IMAGES em vez de READ_EXTERNAL_STORAGE -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
         android:label="SQEducaPlay"
         android:name="${applicationName}"

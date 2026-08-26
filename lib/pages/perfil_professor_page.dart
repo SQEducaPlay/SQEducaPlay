@@ -346,7 +346,8 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
 
               if (!context.mounted) return;
 
-              UserService().clearCurrentUser();
+              await UserService().logout();
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const AccessChoicePage()),
                 (route) => false,

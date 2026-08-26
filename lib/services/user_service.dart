@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'password_service.dart';
 
@@ -23,7 +24,9 @@ class UserService {
     final normalizedUsername = username.trim().toLowerCase();
     for (final user in _users) {
       if (user.username.toLowerCase() == normalizedUsername) {
-        return PasswordService.verifyPassword(password, user.password) ? user : null;
+        if (!PasswordService.verifyPassword(password, user.password)) return null;
+        _currentUsername = user.username; // Seção 5.1: atualiza sessão após login
+        return user;
       }
     }
     return null;
@@ -93,6 +96,27 @@ class UserService {
 
   void clearCurrentUser() {
     _currentUsername = null;
+  }
+
+  /// Logout completo: limpa memória e SharedPreferences.
+  Future<void> logout() async {
+    _currentUsername = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('usuario_id');
+      await prefs.remove('usuario_nome');
+      await prefs.remove('usuario_grade');
+    } catch (_) {}
+  }
+
+  /// Remove um usuário da lista em memória pelo username.
+  /// Usado principalmente em tearDown de testes.
+  void removeUser(String username) {
+    final normalized = normalizeUsername(username);
+    _users.removeWhere((u) => u.username.toLowerCase() == normalized.toLowerCase());
+    if (_currentUsername?.toLowerCase() == normalized.toLowerCase()) {
+      _currentUsername = null;
+    }
   }
 
   List<User> getAllUsers() => List.unmodifiable(_users);

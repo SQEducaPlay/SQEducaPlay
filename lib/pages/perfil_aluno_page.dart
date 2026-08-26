@@ -946,7 +946,7 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
       return;
     }
 
-    final granted = await _requestPermission(choice == 'camera' ? Permission.camera : Permission.photos);
+    final granted = await _requestPermission(choice == 'camera' ? Permission.camera : null);
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1020,7 +1020,8 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     'rocket': _AvatarOption('Foguete', Icons.rocket_launch_rounded, Colors.blue),
   };
 
-  Future<bool> _requestPermission(Permission permission) async {
+  Future<bool> _requestPermission(Permission? permission) async {
+    if (permission == null) return true; // galeria usa Photo Picker, sem permissão necessária
     final status = await permission.request();
     return status.isGranted;
   }

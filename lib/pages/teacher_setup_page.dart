@@ -8,6 +8,13 @@ import '../school_service.dart';
 import '../services/user_service.dart';
 import '../widgets/app_bar.dart';
 
+// Correção P0-03: a criação de conta de educador deixou de depender apenas
+// de "ainda não existe outro educador neste aparelho" — qualquer pessoa
+// conseguia se autocadastrar e escolher escola/turmas livremente. Agora é
+// obrigatório um código de convite de uso único, emitido por um
+// administrador para a escola selecionada (veja
+// AppDatabase.createTeacherFromInvite e TeacherInviteService).
+
 class TeacherSetupPage extends StatefulWidget {
   const TeacherSetupPage({super.key});
 
@@ -23,6 +30,7 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
   final _confirmPasswordController = TextEditingController();
   final _classGroupController = TextEditingController();
   final _scheduleController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
 
   final _schools = SchoolService().getAllSchools();
   final _grades = const [
@@ -49,6 +57,7 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
     _confirmPasswordController.dispose();
     _classGroupController.dispose();
     _scheduleController.dispose();
+    _inviteCodeController.dispose();
     super.dispose();
   }
 
@@ -132,24 +141,27 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
     }
     final primaryAssignment = _assignments.first;
 
+    // O convite autoriza apenas UMA escola. Todas as turmas adicionadas
+    // precisam pertencer a ela — caso contrário, o educador poderia usar um
+    // convite de uma escola para se vincular a turmas de outra.
+    final hasOtherSchool = _assignments.any((a) => a.schoolId != primaryAssignment.schoolId);
+    if (hasOtherSchool) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Todas as turmas devem ser da mesma escola do convite.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     try {
-      final hasTeacher = await AppDatabase.instance.hasTeacherAccount();
-      if (hasTeacher) {
-        throw ArgumentError('Ja existe uma conta de educador cadastrada. Use o acesso de educador para entrar.');
-      }
-
       final userService = UserService();
       final normalizedUsername = userService.normalizeUsername(_usernameController.text);
 
       final usernameError = userService.validateUsername(normalizedUsername);
       if (usernameError != null) {
         throw ArgumentError(usernameError);
-      }
-
-      final exists = await AppDatabase.instance.getUserByUsername(normalizedUsername);
-      if (exists != null) {
-        throw ArgumentError('Este nome de usuario ja existe.');
       }
 
       final user = User(
@@ -162,19 +174,27 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
         role: 'teacher',
       );
 
-      final created = await AppDatabase.instance.createUser(user);
-      for (final assignment in _assignments) {
-        await AppDatabase.instance.createTeacherAssignment(
-          TeacherAssignment(
-            teacherId: created.id!,
-            schoolId: assignment.schoolId,
-            grade: assignment.grade,
-            classGroup: assignment.classGroup,
-            shift: assignment.shift,
-            schedule: assignment.schedule.isEmpty ? null : assignment.schedule,
-          ),
-        );
-      }
+      final assignments = _assignments
+          .map(
+            (assignment) => TeacherAssignment(
+              teacherId: 0, // preenchido pelo AppDatabase dentro da transação
+              schoolId: assignment.schoolId,
+              grade: assignment.grade,
+              classGroup: assignment.classGroup,
+              shift: assignment.shift,
+              schedule: assignment.schedule.isEmpty ? null : assignment.schedule,
+            ),
+          )
+          .toList();
+
+      // Correção P0-03: cria a conta e consome o convite em uma única
+      // operação atômica. Sem um código válido para a escola selecionada,
+      // nenhuma conta é criada.
+      final created = await AppDatabase.instance.createTeacherFromInvite(
+        inviteCode: _inviteCodeController.text,
+        teacher: user,
+        assignments: assignments,
+      );
       userService.addUserFromDb(created);
 
       if (!mounted) return;
@@ -216,6 +236,23 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
                   const Text(
                     'Crie sua conta e informe as turmas que você atende.',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _inviteCodeController,
+                    textCapitalization: TextCapitalization.characters,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Código de convite',
+                      helperText: 'Fornecido pela coordenação/escola. Uso único.',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Informe o código de convite fornecido pela escola.';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(

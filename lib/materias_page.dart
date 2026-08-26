@@ -66,7 +66,8 @@ class MateriasPage extends StatelessWidget {
                 debugPrint('Falha ao parar o áudio no logout: $e\n$s');
               }
               if (!context.mounted) return;
-              UserService().clearCurrentUser();
+              await UserService().logout();
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AccessChoicePage()), (route) => false);
             }),

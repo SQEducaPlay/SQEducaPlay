@@ -4,8 +4,11 @@ import 'home_page.dart';
 import 'materias_page.dart';
 import 'register_page.dart';
 import 'pages/access_choice_page.dart';
+import 'pages/perfil_professor_page.dart';
+import 'pages/teacher_setup_page.dart';
 import 'models/user_model.dart';
 import 'services/user_service.dart';
+import 'services/password_service.dart';
 import 'database/app_database.dart';
 import 'package:sqeducaplay/models/user_model.dart' as db_model;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,7 +57,8 @@ class _LoginPageState extends State<LoginPage> {
     if (user == null) {
       try {
         final dbUser = await AppDatabase.instance.getUserByUsername(username);
-        if (dbUser != null) {
+        if (dbUser != null &&
+            PasswordService.verifyPassword(password, dbUser.password)) {
           _userService.addUserFromDb(dbUser);
           user = dbUser;
           Logger.d('Usuário recuperado do banco de dados: ${dbUser.fullName}');
@@ -64,40 +68,55 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
 
-      if (user != null) {
-      // Criar ou buscar usuário no SQLite (salva também prefs quando possível)
-        await _criarOuBuscarUsuarioNoBanco(user.username, user.role, user.grade);
+    if (user != null) {
+      final loggedUser = user; // Cria variável local para null-safety
 
-        if (!mounted) return;
+      if (widget.audience == LoginAudience.teacher && loggedUser.role != 'teacher') {
+        _userService.clearCurrentUser();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Use uma conta de educador para este acesso.')),
+        );
+        return;
+      }
 
-        final loggedUser = user; // Cria variável local para null-safety
+      if (widget.audience == LoginAudience.student && loggedUser.role == 'teacher') {
+        _userService.clearCurrentUser();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Use o acesso de educador para esta conta.')),
+        );
+        return;
+      }
 
-        if (widget.audience == LoginAudience.teacher && loggedUser.role != 'teacher') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Use uma conta de educador para este acesso.')),
-          );
-          return;
-        }
+      // Persistir a sessao local somente depois de validar o tipo de acesso.
+      await _criarOuBuscarUsuarioNoBanco(
+        loggedUser.username,
+        password,
+        loggedUser.role,
+        loggedUser.grade,
+      );
 
-        if (widget.audience == LoginAudience.student && loggedUser.role == 'teacher') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Use o acesso de educador para esta conta.')),
-          );
-          return;
-        }
+      if (!mounted) return;
 
-        if (loggedUser.role == 'admin') {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
-        } else {
-          // Para alunos, tentar a série salva e usar 2º Ano como padrão.
-          final prefs = await SharedPreferences.getInstance();
-          final ano = loggedUser.grade ?? prefs.getString('usuario_grade') ?? '2º Ano Fundamental';
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => MateriasPage(ano: ano),
-            ),
-          );
-        }
+      if (loggedUser.role == 'admin') {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
+      } else if (loggedUser.role == 'teacher') {
+        // Correção P0-04: educadores devem cair no painel do educador,
+        // nunca na área de matérias do aluno.
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ProfessorDashboardPage(username: loggedUser.username),
+          ),
+        );
+      } else {
+        // Para alunos, tentar a série salva e usar 2º Ano como padrão.
+        final prefs = await SharedPreferences.getInstance();
+        final ano = loggedUser.grade ?? prefs.getString('usuario_grade') ?? '2º Ano Fundamental';
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => MateriasPage(ano: ano),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuário ou senha inválidos!')),
@@ -105,7 +124,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _criarOuBuscarUsuarioNoBanco(String nome, String? role, [String? grade]) async {
+  Future<void> _criarOuBuscarUsuarioNoBanco(
+    String nome,
+    String password,
+    String? role, [
+    String? grade,
+  ]) async {
     try {
       // Usamos AppDatabase que trabalha com o modelo User
       final dbUser = await AppDatabase.instance.getUserByUsername(nome);
@@ -115,9 +139,9 @@ class _LoginPageState extends State<LoginPage> {
         // Criar novo usuário no DB
         final created = await AppDatabase.instance.createUser(db_model.User(
           username: nome,
-          password: role ?? 'password',
+          password: password,
           fullName: nome,
-          role: 'student',
+          role: role ?? 'student',
           grade: grade,
         ));
         await prefs.setInt('usuario_id', created.id!);
@@ -138,9 +162,15 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _goToRegisterPage() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const RegisterPage()));
+    if (widget.audience == LoginAudience.teacher) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const TeacherSetupPage()),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const RegisterPage()),
+      );
+    }
   }
 
   void _switchProfile() {
@@ -269,7 +299,12 @@ class _LoginPageState extends State<LoginPage> {
                                     child: TextButton(
                                       onPressed: _goToRegisterPage,
                                       style: TextButton.styleFrom(foregroundColor: Colors.blue.shade900, padding: EdgeInsets.zero),
-                                      child: const Text('Cadastrar novo usuário', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                      child: Text(
+                                        widget.audience == LoginAudience.teacher
+                                            ? 'Primeiro acesso do educador'
+                                            : 'Cadastrar novo usuário',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: lineSpacing),

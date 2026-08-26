@@ -2,8 +2,11 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqeducaplay/models/user_model.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/password_service.dart';
 import '../models/teacher_assignment_model.dart';
+import '../models/teacher_invite_model.dart';
 
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._init();
@@ -21,6 +24,8 @@ class AppDatabase {
   int _inMemoryNextAttemptId = 1;
   final List<TeacherAssignment> _inMemoryTeacherAssignments = [];
   int _inMemoryNextTeacherAssignmentId = 1;
+  final List<TeacherInvite> _inMemoryTeacherInvites = [];
+  int _inMemoryNextTeacherInviteId = 1;
 
   // Detectar se estamos no web: se sim, marcar DB como indisponível para evitar
   // chamadas a sqflite (que não existe no ambiente web) e usar o fallback em memória.
@@ -81,6 +86,23 @@ class AppDatabase {
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     ''');
+
+    // Correção P0-03: convites de uso único para criação de conta de
+    // educador. Sem um código válido e não usado, a tela de primeiro
+    // acesso do educador não deve permitir criar a conta.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS teacher_invites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        schoolId TEXT NOT NULL,
+        createdByUsername TEXT,
+        createdAt TEXT NOT NULL,
+        expiresAt TEXT NOT NULL,
+        usedAt TEXT,
+        usedByUserId INTEGER,
+        FOREIGN KEY (usedByUserId) REFERENCES users (id)
+      )
+    ''');
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -89,7 +111,7 @@ class AppDatabase {
     try {
       return await openDatabase(
         path,
-        version: 9,
+        version: 10,
         onCreate: _createDB,
         onUpgrade: (Database db, int oldVersion, int newVersion) async {
           // Upgrade path: v1 -> v2 add profilePhotoPath column to users
@@ -138,6 +160,9 @@ class AppDatabase {
             } catch (_) {}
           }
           if (oldVersion < 9) {
+            await _ensureRequiredTables(db);
+          }
+          if (oldVersion < 10) {
             await _ensureRequiredTables(db);
           }
         },
@@ -315,6 +340,20 @@ class AppDatabase {
         shift $textType,
         schedule $textNullable,
         FOREIGN KEY (teacherId) REFERENCES users (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE teacher_invites (
+        id $idType,
+        code TEXT NOT NULL UNIQUE,
+        schoolId $textType,
+        createdByUsername $textNullable,
+        createdAt $textType,
+        expiresAt $textType,
+        usedAt TEXT,
+        usedByUserId INTEGER,
+        FOREIGN KEY (usedByUserId) REFERENCES users (id)
       )
     ''');
 
@@ -874,6 +913,239 @@ class AppDatabase {
     return maps.map(TeacherAssignment.fromMap).toList();
   }
 
+  // ---------------------------------------------------------------------
+  // Convites de educador (P0-03): a criação de conta de educador só é
+  // permitida mediante um código de uso único, emitido por um
+  // administrador para UMA escola específica.
+  // ---------------------------------------------------------------------
+
+  Future<TeacherInvite> createTeacherInvite({
+    required String code,
+    required String schoolId,
+    String? createdByUsername,
+    Duration validFor = const Duration(days: 14),
+  }) async {
+    final now = DateTime.now();
+    final invite = TeacherInvite(
+      code: code,
+      schoolId: schoolId,
+      createdByUsername: createdByUsername,
+      createdAt: now,
+      expiresAt: now.add(validFor),
+    );
+
+    if (!_dbAvailable) {
+      final created = TeacherInvite(
+        id: _inMemoryNextTeacherInviteId++,
+        code: invite.code,
+        schoolId: invite.schoolId,
+        createdByUsername: invite.createdByUsername,
+        createdAt: invite.createdAt,
+        expiresAt: invite.expiresAt,
+      );
+      _inMemoryTeacherInvites.add(created);
+      return created;
+    }
+
+    final db = await database;
+    await _ensureRequiredTables(db);
+    final id = await db.insert('teacher_invites', invite.toMap()..remove('id'));
+    return TeacherInvite(
+      id: id,
+      code: invite.code,
+      schoolId: invite.schoolId,
+      createdByUsername: invite.createdByUsername,
+      createdAt: invite.createdAt,
+      expiresAt: invite.expiresAt,
+    );
+  }
+
+  Future<TeacherInvite?> getTeacherInviteByCode(String code) async {
+    final normalized = code.trim();
+    if (normalized.isEmpty) return null;
+
+    if (!_dbAvailable) {
+      try {
+        return _inMemoryTeacherInvites.firstWhere((invite) => invite.code == normalized);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final db = await database;
+    final result = await db.query(
+      'teacher_invites',
+      where: 'code = ?',
+      whereArgs: [normalized],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return TeacherInvite.fromMap(result.first);
+  }
+
+  Future<List<TeacherInvite>> listTeacherInvites({String? schoolId}) async {
+    if (!_dbAvailable) {
+      return _inMemoryTeacherInvites
+          .where((invite) => schoolId == null || invite.schoolId == schoolId)
+          .toList();
+    }
+
+    final db = await database;
+    final result = await db.query(
+      'teacher_invites',
+      where: schoolId != null ? 'schoolId = ?' : null,
+      whereArgs: schoolId != null ? [schoolId] : null,
+      orderBy: 'createdAt DESC',
+    );
+    return result.map(TeacherInvite.fromMap).toList();
+  }
+
+  /// Cria a conta de educador e consome o convite em uma única operação
+  /// atômica: se o convite não existir, já tiver sido usado, estiver
+  /// expirado, for de outra escola, ou o nome de usuário já existir,
+  /// nada é gravado. Lança [ArgumentError] com uma mensagem adequada para
+  /// exibir ao usuário.
+  Future<User> createTeacherFromInvite({
+    required String inviteCode,
+    required User teacher,
+    required List<TeacherAssignment> assignments,
+  }) async {
+    if (assignments.isEmpty) {
+      throw ArgumentError('Adicione pelo menos uma turma.');
+    }
+
+    final normalizedCode = inviteCode.trim();
+    if (normalizedCode.isEmpty) {
+      throw ArgumentError('Informe o código de convite fornecido pela escola.');
+    }
+
+    final hashedPassword = PasswordService.hashIfNeeded(teacher.password);
+    final now = DateTime.now();
+
+    if (!_dbAvailable) {
+      final inviteIdx = _inMemoryTeacherInvites.indexWhere((i) => i.code == normalizedCode);
+      if (inviteIdx < 0) {
+        throw ArgumentError('Código de convite inválido.');
+      }
+      final invite = _inMemoryTeacherInvites[inviteIdx];
+      if (!invite.isValidAt(now)) {
+        throw ArgumentError(invite.isUsed
+            ? 'Este código de convite já foi utilizado.'
+            : 'Este código de convite expirou. Solicite um novo à escola.');
+      }
+      if (invite.schoolId != teacher.schoolId) {
+        throw ArgumentError('Este código de convite não é válido para a escola selecionada.');
+      }
+      if (_inMemoryUsers.any((u) => u.username.toLowerCase() == teacher.username.toLowerCase())) {
+        throw ArgumentError('Este nome de usuário já existe.');
+      }
+
+      final id = _inMemoryNextId++;
+      final created = teacher.copy(id: id, password: hashedPassword, createdAt: now);
+      _inMemoryUsers.add(created);
+      for (final assignment in assignments) {
+        _inMemoryTeacherAssignments.add(TeacherAssignment(
+          id: _inMemoryNextTeacherAssignmentId++,
+          teacherId: id,
+          schoolId: assignment.schoolId,
+          grade: assignment.grade,
+          classGroup: assignment.classGroup,
+          shift: assignment.shift,
+          schedule: assignment.schedule,
+        ));
+      }
+      _inMemoryTeacherInvites[inviteIdx] = TeacherInvite(
+        id: invite.id,
+        code: invite.code,
+        schoolId: invite.schoolId,
+        createdByUsername: invite.createdByUsername,
+        createdAt: invite.createdAt,
+        expiresAt: invite.expiresAt,
+        usedAt: now,
+        usedByUserId: id,
+      );
+      return created;
+    }
+
+    final db = await database;
+    await _ensureRequiredTables(db);
+
+    return db.transaction<User>((txn) async {
+      final inviteRows = await txn.query(
+        'teacher_invites',
+        where: 'code = ?',
+        whereArgs: [normalizedCode],
+        limit: 1,
+      );
+      if (inviteRows.isEmpty) {
+        throw ArgumentError('Código de convite inválido.');
+      }
+      final invite = TeacherInvite.fromMap(inviteRows.first);
+      if (!invite.isValidAt(now)) {
+        throw ArgumentError(invite.isUsed
+            ? 'Este código de convite já foi utilizado.'
+            : 'Este código de convite expirou. Solicite um novo à escola.');
+      }
+      if (invite.schoolId != teacher.schoolId) {
+        throw ArgumentError('Este código de convite não é válido para a escola selecionada.');
+      }
+
+      final existingUser = await txn.query(
+        'users',
+        where: 'username = ?',
+        whereArgs: [teacher.username],
+        limit: 1,
+      );
+      if (existingUser.isNotEmpty) {
+        throw ArgumentError('Este nome de usuário já existe.');
+      }
+
+      final userId = await txn.insert('users', {
+        'username': teacher.username,
+        'password': hashedPassword,
+        'fullName': teacher.fullName,
+        'nickname': teacher.nickname,
+        'grade': teacher.grade,
+        'classGroup': teacher.classGroup,
+        'schoolId': teacher.schoolId,
+        'profilePhotoPath': teacher.profilePhotoPath,
+        'guardianName': teacher.guardianName,
+        'consentAt': teacher.consentAt?.toIso8601String(),
+        'consentVersion': teacher.consentVersion,
+        'role': teacher.role,
+        'pontuacao_total': 0,
+        'estrelas_total': 0,
+        'createdAt': now.toIso8601String(),
+      });
+
+      for (final assignment in assignments) {
+        await txn.insert('teacher_assignments', {
+          'teacherId': userId,
+          'schoolId': assignment.schoolId,
+          'grade': assignment.grade,
+          'classGroup': assignment.classGroup,
+          'shift': assignment.shift,
+          'schedule': assignment.schedule,
+        });
+      }
+
+      final updatedRows = await txn.update(
+        'teacher_invites',
+        {'usedAt': now.toIso8601String(), 'usedByUserId': userId},
+        where: 'id = ? AND usedAt IS NULL',
+        whereArgs: [invite.id],
+      );
+      if (updatedRows != 1) {
+        // Alguém consumiu o mesmo convite entre a leitura e a gravação
+        // (corrida entre dois cadastros simultâneos). Aborta a transação
+        // inteira para não deixar duas contas criadas com um convite só.
+        throw ArgumentError('Este código de convite já foi utilizado.');
+      }
+
+      return teacher.copy(id: userId, password: hashedPassword, createdAt: now);
+    });
+  }
+
   Future<bool> hasTeacherAccount() async {
     if (!_dbAvailable) {
       return _inMemoryUsers.any((u) => u.role == 'teacher');
@@ -984,21 +1256,87 @@ class AppDatabase {
     );
   }
 
+  /// Apaga a conta e TODOS os dados associados ao usuário de forma atômica.
+  ///
+  /// Tabelas limpas: partidas, quiz_question_attempts, user_progress,
+  /// user_stats, user_achievements, user_rankings, daily_mission_rewards,
+  /// teacher_assignments e, por último, users.
+  /// Também apaga o arquivo de foto de perfil, se existir.
+  ///
+  /// Retorna 1 se o usuário foi encontrado e removido, 0 caso contrário.
   Future<int> deleteUser(int id) async {
     if (!_dbAvailable) {
       final idx = _inMemoryUsers.indexWhere((u) => u.id == id);
-      if (idx >= 0) {
-        _inMemoryUsers.removeAt(idx);
-        return 1;
-      }
-      return 0;
+      if (idx < 0) return 0;
+      // Limpa dados relacionados em memória.
+      _inMemoryPartidas.removeWhere((r) => r['usuario_id'] == id);
+      _inMemoryQuestionAttempts.removeWhere((r) => r['usuario_id'] == id);
+      _inMemoryDailyMissionRewards.removeWhere((r) => r['user_id'] == id);
+      _inMemoryTeacherAssignments.removeWhere((r) => r.teacherId == id);
+      _inMemoryUsers.removeAt(idx);
+      return 1;
     }
+
     final db = await database;
-    return await db.delete(
-      'users',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+
+    // Busca caminho da foto antes de apagar o registro.
+    String? photoPath;
+    try {
+      final rows = await db.query('users', columns: ['profilePhotoPath'], where: 'id = ?', whereArgs: [id], limit: 1);
+      if (rows.isNotEmpty) photoPath = rows.first['profilePhotoPath'] as String?;
+    } catch (_) {}
+
+    int deleted = 0;
+    await db.transaction((txn) async {
+      // Habilita chaves estrangeiras dentro da transação.
+      await txn.execute('PRAGMA foreign_keys = ON');
+
+      // Apaga em cascata todos os dados do usuário.
+      for (final table in [
+        'quiz_question_attempts',
+        'partidas',
+        'user_progress',
+        'user_stats',
+        'user_achievements',
+        'user_rankings',
+        'daily_mission_rewards',
+        'teacher_assignments',
+      ]) {
+        try {
+          final col = (table == 'daily_mission_rewards') ? 'user_id' : 'userId';
+          // partidas e quiz_question_attempts usam usuario_id
+          final colFinal = (table == 'partidas' || table == 'quiz_question_attempts') ? 'usuario_id' : col;
+          await txn.delete(table, where: '$colFinal = ?', whereArgs: [id]);
+        } catch (_) {}
+      }
+
+      deleted = await txn.delete('users', where: 'id = ?', whereArgs: [id]);
+    });
+
+    // Apaga arquivo de foto fora da transação (operação de I/O).
+    if (photoPath != null && photoPath.isNotEmpty) {
+      try {
+        final file = File(photoPath);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+
+    return deleted;
+  }
+
+  /// Apaga a conta do usuário atual e limpa SharedPreferences.
+  /// Retorna true se a exclusão foi bem-sucedida.
+  Future<bool> deleteCurrentUserAccount(int userId) async {
+    final deleted = await deleteUser(userId);
+    if (deleted > 0) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('usuario_id');
+        await prefs.remove('usuario_nome');
+        await prefs.remove('usuario_grade');
+      } catch (_) {}
+    }
+    return deleted > 0;
   }
 
   // Métodos para Estatísticas

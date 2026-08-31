@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
 import 'pages/access_choice_page.dart';
 import 'package:flutter/services.dart';
+import 'services/backend_service.dart';
 import 'services/background_audio_service.dart';
 import 'services/progresso_service.dart';
+import 'services/user_service.dart';
 import 'theme/design_tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Inicializa o serviço de áudio de fundo uma vez por toda a aplicação
+  // Backend Supabase é opcional; sem --dart-define o app opera offline.
+  await BackendService.instance.initialize();
   try {
     await BackgroundAudioService.instance.init();
   } catch (e, s) {
-    // Melhoria: Adiciona log em caso de falha para facilitar o diagnóstico.
     debugPrint('Falha ao inicializar o serviço de áudio: $e\n$s');
   }
-  // Carrega progresso persistido do banco para disponibilizar perfil/ranking
   try {
-    // Correção: Usa a instância singleton para consistência de dados.
     await ProgressoService().carregarDoBanco();
   } catch (e, s) {
-    // Melhoria: Não interrompe o início, mas registra o erro para diagnóstico.
     debugPrint('Falha ao carregar o progresso do banco: $e\n$s');
   }
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+
+  UserService().ensureDevelopmentAdmin();
+
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const SQEducaPlay());
 }
 

@@ -32,6 +32,41 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _savePassword = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _carregarCredenciaisSalvas();
+  }
+
+  Future<void> _carregarCredenciaisSalvas() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    final savedUsername = prefs.getString('saved_username');
+    final savedPassword = prefs.getString('saved_password');
+
+    if (savedUsername != null && savedUsername.isNotEmpty) {
+      _usernameController.text = savedUsername;
+    }
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _passwordController.text = savedPassword;
+      _savePassword = true;
+    }
+    setState(() {});
+  }
+
+  Future<void> _persistirCredenciais() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_savePassword) {
+      await prefs.setString('saved_username', _usernameController.text.trim());
+      await prefs.setString('saved_password', _passwordController.text);
+    } else {
+      await prefs.remove('saved_username');
+      await prefs.remove('saved_password');
+    }
+  }
+
   void _login() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
@@ -94,6 +129,7 @@ class _LoginPageState extends State<LoginPage> {
         loggedUser.role,
         loggedUser.grade,
       );
+      await _persistirCredenciais();
 
       if (!mounted) return;
 

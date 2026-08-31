@@ -10,6 +10,7 @@ import '../services/background_audio_service.dart';
 import '../school_service.dart';
 import '../theme/design_tokens.dart';
 import '../services/user_service.dart';
+import '../services/session_service.dart';
 import '../widgets/app_bar.dart';
 import '../widgets/card_primary.dart';
 import '../widgets/section_header.dart';
@@ -346,7 +347,7 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
 
               if (!context.mounted) return;
 
-              await UserService().logout();
+              await SessionService.logout();
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const AccessChoicePage()),
@@ -1300,25 +1301,28 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
                             color: Colors.blueGrey.shade50,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                            leading: CircleAvatar(
-                              backgroundColor: _rankColor(entry['position'] as int),
-                              child: Text(
-                                '${entry['position']}',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                              leading: CircleAvatar(
+                                backgroundColor: _rankColor(entry['position'] as int),
+                                child: Text(
+                                  '${entry['position']}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                            ),
-                            title: Text(
-                              entry['name'] as String,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '${entry['points']} pontos • ${entry['stars']} ⭐',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12),
+                              title: Text(
+                                entry['name'] as String,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${entry['points']} pontos • ${entry['stars']} ⭐',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
                           ),
                         ),
@@ -1357,53 +1361,59 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
         border: Border.all(color: accentColor.withValues(alpha: 0.22), width: 1.1),
         color: accentColor.withValues(alpha: 0.05),
       ),
-      child: CardPrimary(
+      child: Padding(
         padding: const EdgeInsets.all(14),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: const EdgeInsets.only(top: 12),
-          collapsedIconColor: accentColor,
-          iconColor: accentColor,
-          title: Text(
-            grade,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accentColor),
+        child: Material(
+          color: Colors.transparent,
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(top: 12),
+            collapsedIconColor: accentColor,
+            iconColor: accentColor,
+            title: Text(
+              grade,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accentColor),
+            ),
+            subtitle: Text('${students.length} aluno(s) disponíveis'),
+            children: [
+              if (students.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Nenhum aluno cadastrado neste ano.'),
+                  ),
+                )
+              else
+                ...orderedStudents.map((student) {
+                  final studentRank = gradeRanking.firstWhere(
+                    (item) => item['username'] == student.username,
+                    orElse: () => {'position': '-', 'points': 0},
+                  );
+                  return Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      onTap: () => _openStudentErrorsPage(context, student, grade, ranking),
+                      leading: CircleAvatar(
+                        backgroundColor: accentColor.withValues(alpha: 0.92),
+                        child: const Icon(Icons.person, color: Colors.white),
+                      ),
+                      title: Text(_getStudentDisplayName(student)),
+                      subtitle: Text(
+                        student.classGroup != null && student.classGroup!.trim().isNotEmpty
+                            ? student.classGroup!
+                            : 'Sem turma definida',
+                      ),
+                      trailing: Text(
+                        '#${studentRank['position']} • ${studentRank['points']} pts',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
+                }),
+            ],
           ),
-          subtitle: Text('${students.length} aluno(s) disponíveis'),
-          children: [
-            if (students.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Nenhum aluno cadastrado neste ano.'),
-                ),
-              )
-            else
-              ...orderedStudents.map((student) {
-                final studentRank = gradeRanking.firstWhere(
-                  (item) => item['username'] == student.username,
-                  orElse: () => {'position': '-', 'points': 0},
-                );
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  onTap: () => _openStudentErrorsPage(context, student, grade, ranking),
-                  leading: CircleAvatar(
-                    backgroundColor: accentColor.withValues(alpha: 0.92),
-                    child: const Icon(Icons.person, color: Colors.white),
-                  ),
-                  title: Text(_getStudentDisplayName(student)),
-                  subtitle: Text(
-                    student.classGroup != null && student.classGroup!.trim().isNotEmpty
-                        ? student.classGroup!
-                        : 'Sem turma definida',
-                  ),
-                  trailing: Text(
-                    '#${studentRank['position']} • ${studentRank['points']} pts',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                );
-              }),
-          ],
         ),
       ),
     );

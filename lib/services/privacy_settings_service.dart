@@ -7,12 +7,13 @@ class PrivacySettingsService {
   PrivacySettingsService._internal();
 
   // Configurações básicas de privacidade (em memória)
-  bool anonymizeStudentNames = true; // Exibir nomes públicos (apelido / primeiro nome + inicial)
-  bool showSchoolInStudentRanking = false; // Mostrar escola no ranking de alunos
-  bool studentDefaultToOwnSchool = true; // Ranking para aluno abre filtrado por própria escola
-  bool enableConfetti = true; // Mostrar confete em conquistas
-  bool enableSounds = false; // Tocar sons ao celebrar
-  bool enableBackgroundMusic = true; // Música de fundo no jogo
+  bool anonymizeStudentNames = true;
+  bool showSchoolInStudentRanking = false;
+  bool studentDefaultToOwnSchool = true;
+  bool enableConfetti = true;
+  bool enableSounds = false;
+  bool enableBackgroundMusic = true;
+  bool reduceMotion = false;
 
   static const _kAnonymize = 'privacy.anonymizeStudentNames';
   static const _kShowSchool = 'privacy.showSchoolInStudentRanking';
@@ -20,6 +21,7 @@ class PrivacySettingsService {
   static const _kEnableConfetti = 'privacy.enableConfetti';
   static const _kEnableSounds = 'privacy.enableSounds';
   static const _kEnableBgMusic = 'privacy.enableBackgroundMusic';
+  static const _kReduceMotion = 'privacy.reduceMotion';
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,6 +31,7 @@ class PrivacySettingsService {
     enableConfetti = prefs.getBool(_kEnableConfetti) ?? enableConfetti;
     enableSounds = prefs.getBool(_kEnableSounds) ?? enableSounds;
     enableBackgroundMusic = prefs.getBool(_kEnableBgMusic) ?? enableBackgroundMusic;
+    reduceMotion = prefs.getBool(_kReduceMotion) ?? reduceMotion;
   }
 
   Future<void> save() async {
@@ -39,5 +42,6 @@ class PrivacySettingsService {
     await prefs.setBool(_kEnableConfetti, enableConfetti);
     await prefs.setBool(_kEnableSounds, enableSounds);
     await prefs.setBool(_kEnableBgMusic, enableBackgroundMusic);
+    await prefs.setBool(_kReduceMotion, reduceMotion);
   }
 }

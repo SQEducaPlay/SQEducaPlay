@@ -647,4 +647,10 @@ class ProgressoService {
     final ranking = getRanking();
     return ranking.indexWhere((p) => p.username == username) + 1;
   }
+
+  /// Remove cópias em memória depois que o titular exclui a conta.
+  void removeUserData(String username) {
+    _progressos.remove(username);
+    _conquistasPorUsuario.remove(username);
+  }
 }

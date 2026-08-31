@@ -7,13 +7,17 @@ import 'models/user_model.dart';
 import 'manage_schools_page.dart';
 import 'materias_page.dart';
 import 'pages/access_choice_page.dart';
+import 'pages/admin_profile_page.dart';
+import 'pages/admin_students_page.dart';
 import 'pages/admin_teacher_invites_page.dart';
+import 'pages/admin_teachers_page.dart';
 import 'pages/perfil_aluno_page.dart';
 import 'pages/ranking_database_page.dart';
 import 'pages/privacy_settings_page.dart';
 import 'services/progresso_service.dart';
 import 'services/daily_mission_service.dart';
 import 'services/user_service.dart';
+import 'services/session_service.dart';
 import 'widgets/app_bar.dart';
 import 'widgets/card_primary.dart';
 import 'widgets/section_header.dart';
@@ -111,263 +115,333 @@ class _HomePageState extends State<HomePage> {
     final diasConsecutivos = _progresso?.diasConsecutivos ?? 0;
     final name = _user?.fullName ?? 'Aluno';
     final firstName = name.trim().split(RegExp(r'\s+')).first;
+    final isAdmin = _user?.role == 'admin';
 
     return Scaffold(
       backgroundColor: DesignTokens.surface,
       appBar: AppTopBar(
         title: 'SQEducaPlay 📚',
-        actions: [
-          if (_user?.role == 'admin') ...[
-            IconButton(
-              icon: const Icon(Icons.school_outlined),
-              tooltip: 'Gerenciar escolas',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ManageSchoolsPage()),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_moderator_outlined),
-              tooltip: 'Convites de educador',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminTeacherInvitesPage()),
-                );
-              },
-            ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.privacy_tip_outlined),
-            tooltip: 'Privacidade (LGPD)',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PrivacySettingsPage()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.leaderboard_outlined),
-            tooltip: 'Ranking',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RankingDatabasePage()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Meu Perfil',
-            onPressed: () {
-              if (_user == null) return;
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PerfilAlunoPage(username: _user!.username),
+        showBackButton: false,
+        actions: isAdmin
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Sair',
+                  onPressed: () async {
+                    await SessionService.logout();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const AccessChoicePage()),
+                      (route) => false,
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sair',
-            onPressed: () async {
-              await UserService().logout();
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const AccessChoicePage()),
-                (route) => false,
-              );
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DesignTokens.spaceLG,
-          vertical: DesignTokens.spaceMD,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Olá, $firstName! 👋',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: DesignTokens.primary,
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spaceSM),
-            Text(
-              'Pronto para aprender hoje?',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spaceLG),
-
-            Container(
-              padding: const EdgeInsets.all(DesignTokens.spaceMD),
-              decoration: BoxDecoration(
-                color: DesignTokens.primary,
-                borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
-                ]
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 28),
-                          const SizedBox(width: DesignTokens.spaceSM),
-                          Text(
-                            'Nível $nivel',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '$pontuacao XP',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${diasConsecutivos}d de sequência',
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: DesignTokens.spaceMD),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
-                    child: LinearProgressIndicator(
-                      value: progressoBar.clamp(0.0, 1.0),
-                      backgroundColor: Colors.white30,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
-                      minHeight: 12,
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spaceSM),
-                  Text(
-                    nivel == 'Mestre'
-                        ? 'Você alcançou o nível máximo!'
-                        : 'Faltam $xpParaProximo XP para ${_progresso!.proximoNivelPontos}!',
-                    style: Theme.of(
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  tooltip: 'Privacidade (LGPD)',
+                  onPressed: () {
+                    Navigator.push(
                       context,
-                    ).textTheme.labelMedium?.copyWith(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spaceLG),
-
-            _buildDailyMission(context),
-            const SizedBox(height: DesignTokens.spaceLG),
-
-            const SectionHeader(
-              title: 'Escolha o Ano Escolar',
-            ),
-            const SizedBox(height: DesignTokens.spaceMD),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                crossAxisSpacing: DesignTokens.spaceMD,
-                mainAxisSpacing: DesignTokens.spaceMD,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: widget.series.length,
-              itemBuilder: (context, index) {
-                final serie = widget.series[index];
-                return CardPrimary(
-                  padding: const EdgeInsets.all(DesignTokens.spaceSM),
-                  onTap: () {
+                      MaterialPageRoute(builder: (_) => const PrivacySettingsPage()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.leaderboard_outlined),
+                  tooltip: 'Ranking',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RankingDatabasePage()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_outline),
+                  tooltip: 'Meu Perfil',
+                  onPressed: () {
+                    if (_user == null) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => MateriasPage(ano: serie['ano'])),
+                        builder: (_) => PerfilAlunoPage(username: _user!.username),
+                      ),
                     );
                   },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Sair',
+                  onPressed: () async {
+                    await SessionService.logout();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const AccessChoicePage()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : isAdmin
+              ? _buildAdminDashboard(context)
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DesignTokens.spaceLG,
+                    vertical: DesignTokens.spaceMD,
+                  ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: (serie['cor'] as Color).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          serie['icone'],
-                          color: serie['cor'],
-                          size: 32,
+                      Text(
+                        'Olá, $firstName! 👋',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: DesignTokens.primary,
                         ),
                       ),
                       const SizedBox(height: DesignTokens.spaceSM),
                       Text(
-                        serie['ano'],
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                        'Pronto para aprender hoje?',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[700],
                         ),
                       ),
+                      const SizedBox(height: DesignTokens.spaceLG),
+
+                      Container(
+                        padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                        decoration: BoxDecoration(
+                          color: DesignTokens.primary,
+                          borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star, color: Colors.amber, size: 28),
+                                    const SizedBox(width: DesignTokens.spaceSM),
+                                    Text(
+                                      'Nível $nivel',
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '$pontuacao XP',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${diasConsecutivos}d de sequência',
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: DesignTokens.spaceMD),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                              child: LinearProgressIndicator(
+                                value: progressoBar.clamp(0.0, 1.0),
+                                backgroundColor: Colors.white30,
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+                                minHeight: 12,
+                              ),
+                            ),
+                            const SizedBox(height: DesignTokens.spaceSM),
+                            Text(
+                              nivel == 'Mestre'
+                                  ? 'Você alcançou o nível máximo!'
+                                  : 'Faltam $xpParaProximo XP para ${_progresso!.proximoNivelPontos}!',
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: DesignTokens.spaceLG),
+
+                      _buildDailyMission(context),
+                      const SizedBox(height: DesignTokens.spaceLG),
+
+                      const SectionHeader(title: 'Escolha o Ano Escolar'),
+                      const SizedBox(height: DesignTokens.spaceMD),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                          crossAxisSpacing: DesignTokens.spaceMD,
+                          mainAxisSpacing: DesignTokens.spaceMD,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemCount: widget.series.length,
+                        itemBuilder: (context, index) {
+                          final serie = widget.series[index];
+                          return CardPrimary(
+                            padding: const EdgeInsets.all(DesignTokens.spaceSM),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => MateriasPage(ano: serie['ano'])),
+                              );
+                            },
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: (serie['cor'] as Color).withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    serie['icone'],
+                                    color: serie['cor'],
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(height: DesignTokens.spaceSM),
+                                Text(
+                                  serie['ano'],
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: DesignTokens.spaceLG),
+
+                      const SectionHeader(title: 'Últimas Conquistas'),
+                      const SizedBox(height: DesignTokens.spaceMD),
+                      SizedBox(
+                        height: 100,
+                        child: _conquistasRecentes.isEmpty
+                            ? const Center(child: Text('Nenhuma conquista recente. Continue jogando!'))
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _conquistasRecentes.length,
+                                itemBuilder: (context, index) {
+                                  return _buildConquistaCard(context, _conquistasRecentes[index]);
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: DesignTokens.spaceLG),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+    );
+  }
 
-            const SizedBox(height: DesignTokens.spaceLG),
-
-            const SectionHeader(
-              title: 'Últimas Conquistas',
-            ),
-            const SizedBox(height: DesignTokens.spaceMD),
-            SizedBox(
-              height: 100,
-              child: _conquistasRecentes.isEmpty
-                  ? const Center(child: Text('Nenhuma conquista recente. Continue jogando!'))
-                  : ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _conquistasRecentes.length,
-                itemBuilder: (context, index) {
-                  return _buildConquistaCard(context, _conquistasRecentes[index]);
-                },
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spaceLG),
-          ],
+  Widget _buildAdminDashboard(BuildContext context) {
+    final actions = [
+      _AdminActionCard(
+        title: 'Escolas',
+        subtitle: 'Cadastrar e manter unidades escolares',
+        icon: Icons.school_outlined,
+        color: Colors.blue,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ManageSchoolsPage()),
         ),
+      ),
+      _AdminActionCard(
+        title: 'Alunos',
+        subtitle: 'Consultar estudantes e escolas vinculadas',
+        icon: Icons.people_alt_outlined,
+        color: Colors.indigo,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminStudentsPage()),
+        ),
+      ),
+      _AdminActionCard(
+        title: 'Professores',
+        subtitle: 'Consultar professores e escolas vinculadas',
+        icon: Icons.work_outline,
+        color: Colors.orange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminTeachersPage()),
+        ),
+      ),
+      _AdminActionCard(
+        title: 'Convites',
+        subtitle: 'Gerar códigos de acesso do educador',
+        icon: Icons.add_moderator_outlined,
+        color: Colors.green,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminTeacherInvitesPage()),
+        ),
+      ),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DesignTokens.spaceLG,
+        vertical: DesignTokens.spaceMD,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Painel administrativo',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: DesignTokens.primary,
+            ),
+          ),
+          const SizedBox(height: DesignTokens.spaceSM),
+          Text(
+            'Gerencie estrutura, acesso e convites da instituição.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: DesignTokens.spaceLG),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: actions.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
+              crossAxisSpacing: DesignTokens.spaceMD,
+              mainAxisSpacing: DesignTokens.spaceMD,
+              childAspectRatio: 1.8,
+            ),
+            itemBuilder: (context, index) => actions[index],
+          ),
+        ],
       ),
     );
   }
@@ -471,6 +545,87 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AdminActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AdminActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withValues(alpha: 0.25), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

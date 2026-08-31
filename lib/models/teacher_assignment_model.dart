@@ -17,6 +17,26 @@ class TeacherAssignment {
     this.schedule,
   });
 
+  TeacherAssignment copyWith({
+    int? id,
+    int? teacherId,
+    String? schoolId,
+    String? grade,
+    String? classGroup,
+    String? shift,
+    String? schedule,
+  }) {
+    return TeacherAssignment(
+      id: id ?? this.id,
+      teacherId: teacherId ?? this.teacherId,
+      schoolId: schoolId ?? this.schoolId,
+      grade: grade ?? this.grade,
+      classGroup: classGroup ?? this.classGroup,
+      shift: shift ?? this.shift,
+      schedule: schedule ?? this.schedule,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

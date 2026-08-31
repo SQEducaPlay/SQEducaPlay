@@ -7,6 +7,7 @@ import 'pages/perfil_aluno_page.dart';
 import 'pages/ranking_database_page.dart';
 import 'widgets/app_bar.dart';
 import 'services/user_service.dart';
+import 'services/session_service.dart';
 
 class MateriasPage extends StatelessWidget {
   final String ano;
@@ -66,7 +67,7 @@ class MateriasPage extends StatelessWidget {
                 debugPrint('Falha ao parar o áudio no logout: $e\n$s');
               }
               if (!context.mounted) return;
-              await UserService().logout();
+              await SessionService.logout();
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AccessChoicePage()), (route) => false);

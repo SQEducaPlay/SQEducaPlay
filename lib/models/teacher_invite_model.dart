@@ -28,6 +28,28 @@ class TeacherInvite {
     this.usedByUserId,
   });
 
+  TeacherInvite copyWith({
+    int? id,
+    String? code,
+    String? schoolId,
+    String? createdByUsername,
+    DateTime? createdAt,
+    DateTime? expiresAt,
+    DateTime? usedAt,
+    int? usedByUserId,
+  }) {
+    return TeacherInvite(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      schoolId: schoolId ?? this.schoolId,
+      createdByUsername: createdByUsername ?? this.createdByUsername,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      usedAt: usedAt ?? this.usedAt,
+      usedByUserId: usedByUserId ?? this.usedByUserId,
+    );
+  }
+
   bool get isUsed => usedAt != null;
 
   bool isExpiredAt(DateTime now) => now.isAfter(expiresAt);

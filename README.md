@@ -1,5 +1,13 @@
 # SQEducaPlay
 
+<div align="center">
+
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento-orange)
+
+</div>
+
 Aplicativo educacional gamificado desenvolvido para apoiar o aprendizado de estudantes do Ensino Fundamental I, com foco em Português e Matemática alinhados à BNCC.
 
 ## Entrega acadêmica
@@ -25,7 +33,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - oferecer uma experiência consistente em ambientes digitais e mobile;
 - viabilizar gestão escolar básica no contexto da aplicação.
 
-## Principais funcionalidades
+## Funcionalidades principais
 
 - banco de questões por disciplina e ano;
 - gamificação com pontuação, conquistas e progresso;
@@ -41,7 +49,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - Dart
 - SQLite
 - Material Design
-- Git e GitHub para versionamento
+- GitHub para versionamento
 
 ## Estrutura do projeto
 
@@ -57,7 +65,8 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 ├── pubspec.yaml
 ├── pubspec.lock
 ├── README.md
-└── .gitignore
+├── .gitignore
+└── .metadata
 ```
 
 ## Requisitos
@@ -67,7 +76,7 @@ Antes de executar o projeto, certifique-se de que você tenha instalado:
 - Flutter SDK
 - Git
 - VS Code ou outro editor compatível
-- Android Studio / emulador Android ou dispositivo físico
+- Android Studio, emulador Android ou dispositivo físico
 - Windows: modo de desenvolvedor ativado, quando necessário
 
 ## Como executar
@@ -114,16 +123,6 @@ Para acessar o app como professor:
 2. selecione a opção de professor;
 3. faça login com a conta do professor;
 4. utilize o painel para gerenciar turmas, alunos e convites de acesso.
-
-## Dependências principais
-
-O projeto utiliza as seguintes tecnologias e componentes centrais:
-
-- Flutter SDK
-- SQLite local para persistência de dados
-- arquitetura por módulos e serviços
-- UI em Material Design
-- recursos multimídia e gamificação
 
 ## Conteúdo pedagógico
 

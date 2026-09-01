@@ -7,7 +7,6 @@ import 'models/user_model.dart';
 import 'manage_schools_page.dart';
 import 'materias_page.dart';
 import 'pages/access_choice_page.dart';
-import 'pages/admin_profile_page.dart';
 import 'pages/admin_students_page.dart';
 import 'pages/admin_teacher_invites_page.dart';
 import 'pages/admin_teachers_page.dart';

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../database/app_database.dart';
 import '../models/user_model.dart';
-import '../pages/access_choice_page.dart';
-import '../services/session_service.dart';
 import '../widgets/app_bar.dart';
 
 class AdminProfilePage extends StatefulWidget {
@@ -70,15 +68,6 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       const SnackBar(content: Text('Aluno excluído com sucesso.')),
     );
     await _refreshStudents();
-  }
-
-  Future<void> _logout() async {
-    await SessionService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AccessChoicePage()),
-      (_) => false,
-    );
   }
 
   @override

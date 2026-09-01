@@ -87,7 +87,7 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: students.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final student = students[index];
                 final schoolName = student.schoolId != null && student.schoolId!.isNotEmpty

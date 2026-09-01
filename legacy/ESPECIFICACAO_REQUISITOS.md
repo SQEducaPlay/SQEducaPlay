@@ -1,3 +1,6 @@
+
+
+
 # 📋 ESPECIFICAÇÃO DE REQUISITOS - SQEducaPlay
 
 ## 1. VISÃO GERAL DO PROJETO
@@ -6,7 +9,7 @@
 **SQEducaPlay** é um aplicativo educacional gamificado desenvolvido em **Flutter/Dart** para crianças do Ensino Fundamental I (2º ao 5º ano) de escolas municipais de Saquarema-RJ. O objetivo é tornar o aprendizado divertido e interativo através de quizes alinhados à BNCC (Base Nacional Comum Curricular), com um sistema completo de gamificação.
 
 ### 1.2 Público-alvo
-- 👧👦 **Alunos**: Crianças de 7-11 anos (Ensino Fundamental I)
+- 👧👦 **Alunos**: Crianças de 6-10 anos (Ensino Fundamental I)
 - 👨‍🏫 **Administradores**: Professores e gestores
 - 📍 **Escolas**: 16 escolas municipais de Saquarema-RJ
 
@@ -400,5 +403,5 @@
 ---
 
 **Data de Criação:** 15/05/2026
-**Versão:** 1.0
+**Versão:** 1.2
 **Status:** Em revisão

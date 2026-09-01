@@ -50,6 +50,40 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
     });
   }
 
+  Future<void> _approveStudent(User student) async {
+    await AppDatabase.instance.updateUser(student.copy(isApproved: true));
+    _reloadUsers();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${_getStudentDisplayName(student)} foi aceito na turma.')),
+    );
+  }
+
+  Future<void> _rejectStudent(User student) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recusar cadastro'),
+        content: Text('Recusar e excluir o cadastro de ${_getStudentDisplayName(student)}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Recusar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || student.id == null) return;
+
+    await AppDatabase.instance.deleteUser(student.id!);
+    _reloadUsers();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cadastro recusado e removido.')),
+    );
+  }
+
   Future<void> _openStudentsPage(
     BuildContext context,
     List<String> allowedGrades,
@@ -320,6 +354,7 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
       backgroundColor: DesignTokens.surface,
       appBar: AppTopBar(
         title: 'Perfil do Educador',
+        showBackButton: false,
         showProfileAvatar: true,
         actions: [
           IconButton(
@@ -365,7 +400,9 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
           }
 
           final users = snapshot.data ?? const <User>[];
-          final students = users.where((user) => user.role == 'student').toList();
+          final allStudents = users.where((user) => user.role == 'student').toList();
+          final students = allStudents.where((student) => student.isApproved).toList();
+          final pendingStudents = _pendingStudentsForTeacher(allStudents);
           final studentsByGrade = _groupStudentsByGrade(students, allowedGrades);
           final usersByUsername = {
             for (final user in users) user.username.toLowerCase(): user,
@@ -386,6 +423,48 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
                   usersByUsername,
                   ranking,
                 ),
+                if (pendingStudents.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Solicitações de alunos'),
+                  const SizedBox(height: 12),
+                  ...pendingStudents.map(
+                    (student) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CardPrimary(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person_add_alt_1),
+                          ),
+                          title: Text(_getStudentDisplayName(student)),
+                          subtitle: Text(
+                            '${student.grade ?? 'Série não informada'} • ${student.classGroup ?? 'Turma não informada'}',
+                          ),
+                          trailing: Wrap(
+                            spacing: 2,
+                            children: [
+                              IconButton(
+                                tooltip: 'Aceitar aluno',
+                                icon: const Icon(
+                                  Icons.check_circle_outline,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () => _approveStudent(student),
+                              ),
+                              IconButton(
+                                tooltip: 'Recusar cadastro',
+                                icon: const Icon(
+                                  Icons.cancel_outlined,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _rejectStudent(student),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 _buildQuickActionsCard(context, allowedGrades),
                 const SizedBox(height: 24),
@@ -502,6 +581,18 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
       }).toList();
     }
     return map;
+  }
+
+  List<User> _pendingStudentsForTeacher(List<User> students) {
+    return students.where((student) {
+      if (student.isApproved || _teacherAssignments.isEmpty) return false;
+      return _teacherAssignments.any(
+        (assignment) =>
+            _gradeMatches(student.grade, assignment.grade) &&
+            student.schoolId == assignment.schoolId &&
+            _normalizeClassGroup(student.classGroup) == _normalizeClassGroup(assignment.classGroup),
+      );
+    }).toList();
   }
 
   String _normalizeClassGroup(String? classGroup) {

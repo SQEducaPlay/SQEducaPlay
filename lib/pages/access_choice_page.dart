@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../login_page.dart';
 import '../register_page.dart';
 import 'teacher_setup_page.dart';
 
 class AccessChoicePage extends StatefulWidget {
-  const AccessChoicePage({super.key});
+  final bool skipRememberedAudience;
+
+  const AccessChoicePage({
+    super.key,
+    this.skipRememberedAudience = false,
+  });
 
   @override
   State<AccessChoicePage> createState() => _AccessChoicePageState();
@@ -24,6 +30,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
   @override
   void initState() {
     super.initState();
+    _redirectToRememberedLogin();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 850),
@@ -66,6 +73,23 @@ class _AccessChoicePageState extends State<AccessChoicePage>
     ));
 
     _controller.forward();
+  }
+
+  Future<void> _redirectToRememberedLogin() async {
+    if (widget.skipRememberedAudience) return;
+
+    final preferences = await SharedPreferences.getInstance();
+    final audienceName = preferences.getString('last_login_audience');
+    final audience = switch (audienceName) {
+      'student' => LoginAudience.student,
+      'teacher' => LoginAudience.teacher,
+      _ => null,
+    };
+    if (audience == null || !mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => LoginPage(audience: audience)),
+    );
   }
 
   @override

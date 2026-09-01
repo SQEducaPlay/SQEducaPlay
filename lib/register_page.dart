@@ -5,7 +5,6 @@ import 'school_model.dart';
 import 'school_service.dart';
 import 'services/class_group_service.dart';
 import 'database/app_database.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/logger.dart';
 import 'widgets/app_bar.dart';
 import 'dart:io';
@@ -130,6 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
         consentAt: DateTime.now(),
         consentVersion: _consentVersion,
         role: 'student',
+        isApproved: false,
       );
 
       // Cria no banco primeiro (fonte da verdade); só depois atualiza memória.
@@ -139,17 +139,13 @@ class _RegisterPageState extends State<RegisterPage> {
       // Registra em memória somente após gravação no banco.
       _userService.register(newUser);
 
-      // Persistir sessão nas preferências.
-      final prefs = await SharedPreferences.getInstance();
-      if (created.id != null) await prefs.setInt('usuario_id', created.id!);
-      await prefs.setString('usuario_nome', created.username);
-      if (created.grade != null) {
-        await prefs.setString('usuario_grade', _canonicalGrade(created.grade));
-      }
+      _userService.clearCurrentUser();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuário cadastrado com sucesso!')),
+        const SnackBar(
+          content: Text('Cadastro enviado. Aguarde a aprovação do educador da turma.'),
+        ),
       );
       Navigator.of(context).pop();
     } on ArgumentError catch (e) {
@@ -290,15 +286,21 @@ class _RegisterPageState extends State<RegisterPage> {
                             ))
                         .toList(),
                     onChanged: (v) => setState(() => _selectedClassGroupId = v),
+                    validator: (value) => value == null
+                        ? 'Selecione a turma do aluno.'
+                        : null,
                   ),
                 ] else ...[
                   TextFormField(
                     controller: _classGroupController,
                     decoration: const InputDecoration(
-                      labelText: 'Turma (ex.: 5ºA) - opcional',
+                      labelText: 'Turma (ex.: 5ºA)',
                       prefixIcon: Icon(Icons.class_),
                       border: OutlineInputBorder(),
                     ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Informe a turma do aluno.'
+                        : null,
                   ),
                 ],
                 const SizedBox(height: 16),

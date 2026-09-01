@@ -1,10 +1,7 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqeducaplay/models/user_model.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/password_service.dart';
 import '../models/teacher_assignment_model.dart';
 import '../models/teacher_invite_model.dart';
@@ -116,7 +113,7 @@ class AppDatabase {
     try {
       return await openDatabase(
         path,
-        version: 10,
+        version: 11,
         onConfigure: (Database db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
@@ -191,6 +188,11 @@ class AppDatabase {
             await _ensureRequiredTables(db);
             await _ensureProgressIndex(db);
           }
+          if (oldVersion < 11) {
+            await db.execute(
+              'ALTER TABLE users ADD COLUMN isApproved INTEGER NOT NULL DEFAULT 1',
+            );
+          }
         },
         onOpen: (Database db) async {
           await _ensureRequiredTables(db);
@@ -245,6 +247,7 @@ class AppDatabase {
         classGroup $textNullable,
         schoolId $textNullable,
         role $textType,
+        isApproved INTEGER NOT NULL DEFAULT 1,
         pontuacao_total INTEGER DEFAULT 0,
         estrelas_total INTEGER DEFAULT 0,
         profilePhotoPath $textNullable,
@@ -990,6 +993,7 @@ class AppDatabase {
       'grade': user.grade,
       'classGroup': user.classGroup,
       'schoolId': user.schoolId,
+      'isApproved': user.isApproved ? 1 : 0,
       'profilePhotoPath': user.profilePhotoPath,
       'guardianName': user.guardianName,
       'consentAt': user.consentAt?.toIso8601String(),
@@ -1288,6 +1292,7 @@ class AppDatabase {
         'classGroup',
         'schoolId',
         'role',
+        'isApproved',
         'pontuacao_total',
         'estrelas_total',
         'profilePhotoPath',
@@ -1331,6 +1336,7 @@ class AppDatabase {
           'classGroup',
           'schoolId',
           'role',
+          'isApproved',
           'pontuacao_total',
           'estrelas_total',
           'profilePhotoPath',

@@ -8,6 +8,7 @@ class User {
   final String? classGroup;
   final String? schoolId;
   final String role;
+  final bool isApproved;
   final DateTime? createdAt;
   final DateTime? lastLogin;
   final int? pontuacaoTotal;
@@ -27,6 +28,7 @@ class User {
     this.classGroup,
     this.schoolId,
     this.role = 'student',
+    this.isApproved = true,
     this.createdAt,
     this.lastLogin,
     this.pontuacaoTotal,
@@ -47,6 +49,7 @@ class User {
     String? classGroup,
     String? schoolId,
     String? role,
+    bool? isApproved,
     DateTime? createdAt,
     DateTime? lastLogin,
     int? pontuacaoTotal,
@@ -66,6 +69,7 @@ class User {
         classGroup: classGroup ?? this.classGroup,
         schoolId: schoolId ?? this.schoolId,
         role: role ?? this.role,
+        isApproved: isApproved ?? this.isApproved,
         createdAt: createdAt ?? this.createdAt,
         lastLogin: lastLogin ?? this.lastLogin,
         pontuacaoTotal: pontuacaoTotal ?? this.pontuacaoTotal,
@@ -87,6 +91,7 @@ class User {
       'classGroup': classGroup,
       'schoolId': schoolId,
       'role': role,
+      'isApproved': isApproved ? 1 : 0,
       'createdAt': createdAt?.toIso8601String(),
       'lastLogin': lastLogin?.toIso8601String(),
       'pontuacao_total': pontuacaoTotal ?? 0,
@@ -109,6 +114,7 @@ class User {
       classGroup: map['classGroup'] as String?,
       schoolId: map['schoolId'] as String?,
       role: map['role'] as String,
+      isApproved: (map['isApproved'] as int? ?? 1) == 1,
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt'] as String) : null,
       lastLogin: map['lastLogin'] != null ? DateTime.parse(map['lastLogin'] as String) : null,
       pontuacaoTotal: (map['pontuacao_total'] is int) ? map['pontuacao_total'] as int : ((map['pontuacao_total'] is String) ? int.tryParse(map['pontuacao_total'] as String) : 0),

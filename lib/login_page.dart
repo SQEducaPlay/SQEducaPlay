@@ -32,6 +32,10 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _savePassword = true;
 
+  String get _credentialSuffix => widget.audience.name;
+  String get _savedUsernameKey => 'saved_username_$_credentialSuffix';
+  String get _savedPasswordKey => 'saved_password_$_credentialSuffix';
+
   @override
   void initState() {
     super.initState();
@@ -42,8 +46,8 @@ class _LoginPageState extends State<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
-    final savedUsername = prefs.getString('saved_username');
-    final savedPassword = prefs.getString('saved_password');
+    final savedUsername = prefs.getString(_savedUsernameKey);
+    final savedPassword = prefs.getString(_savedPasswordKey);
 
     if (savedUsername != null && savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
@@ -59,11 +63,11 @@ class _LoginPageState extends State<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
 
     if (_savePassword) {
-      await prefs.setString('saved_username', _usernameController.text.trim());
-      await prefs.setString('saved_password', _passwordController.text);
+      await prefs.setString(_savedUsernameKey, _usernameController.text.trim());
+      await prefs.setString(_savedPasswordKey, _passwordController.text);
     } else {
-      await prefs.remove('saved_username');
-      await prefs.remove('saved_password');
+      await prefs.remove(_savedUsernameKey);
+      await prefs.remove(_savedPasswordKey);
     }
   }
 
@@ -122,6 +126,16 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
+      if (loggedUser.role == 'student' && !loggedUser.isApproved) {
+        _userService.clearCurrentUser();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cadastro aguardando aprovação do educador da turma.'),
+          ),
+        );
+        return;
+      }
+
       // Persistir a sessao local somente depois de validar o tipo de acesso.
       await _criarOuBuscarUsuarioNoBanco(
         loggedUser.username,
@@ -130,6 +144,8 @@ class _LoginPageState extends State<LoginPage> {
         loggedUser.grade,
       );
       await _persistirCredenciais();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_login_audience', widget.audience.name);
 
       if (!mounted) return;
 
@@ -211,7 +227,9 @@ class _LoginPageState extends State<LoginPage> {
 
   void _switchProfile() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const AccessChoicePage()),
+      MaterialPageRoute(
+        builder: (context) => const AccessChoicePage(skipRememberedAudience: true),
+      ),
     );
   }
 

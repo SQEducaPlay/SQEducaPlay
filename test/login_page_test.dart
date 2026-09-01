@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqeducaplay/login_page.dart';
+import 'package:sqeducaplay/pages/access_choice_page.dart';
 import 'package:sqeducaplay/pages/admin_profile_page.dart';
 
 import 'package:sqeducaplay/services/user_service.dart';
@@ -81,9 +82,19 @@ void main() {
     await tester.pumpAndSettle();
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('saved_username'), 'admin');
-    expect(prefs.getString('saved_password'), 'admin123');
+    expect(prefs.getString('saved_username_student'), 'admin');
+    expect(prefs.getString('saved_password_student'), 'admin123');
+    expect(prefs.getString('last_login_audience'), 'student');
 
     userService.removeUser('admin');
+  });
+
+  testWidgets('abre o login do último perfil utilizado', (tester) async {
+    SharedPreferences.setMockInitialValues({'last_login_audience': 'teacher'});
+
+    await tester.pumpWidget(const MaterialApp(home: AccessChoicePage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acesso do Educador!'), findsOneWidget);
   });
 }

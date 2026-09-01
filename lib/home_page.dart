@@ -125,6 +125,16 @@ class _HomePageState extends State<HomePage> {
         actions: isAdmin
             ? [
                 IconButton(
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  tooltip: 'Privacidade (LGPD)',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrivacySettingsPage()),
+                    );
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.logout),
                   tooltip: 'Sair',
                   onPressed: () async {

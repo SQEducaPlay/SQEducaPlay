@@ -20,6 +20,7 @@ Aplicativo educacional gamificado desenvolvido para apoiar o aprendizado de estu
 - Keinan de Souza Cruz
 - Maycon Douglas A. Paixão
 - Leandro de O. B. Monteiro
+- Altamir Junior
 
 ## Visão geral
 

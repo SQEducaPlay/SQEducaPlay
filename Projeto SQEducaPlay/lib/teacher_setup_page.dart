@@ -18,6 +18,7 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
   final _username = TextEditingController();
   final _name = TextEditingController();
   final _password = TextEditingController();
+  final _schoolId = TextEditingController();
   bool _saving = false;
 
   @override
@@ -26,6 +27,7 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
     _username.dispose();
     _name.dispose();
     _password.dispose();
+    _schoolId.dispose();
     super.dispose();
   }
 
@@ -33,15 +35,11 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      if (_code.text.trim().toUpperCase() != 'SQ-2026-EDU3') {
-        throw const FormatException('Código de convite inválido ou expirado.');
-      }
       final service = UserService();
-      if (service.existsUsername(_username.text)) {
-        throw const FormatException('Este nome de usuário já está em uso.');
-      }
-      await AppDatabase.instance.createUser(
-        User(
+      await AppDatabase.instance.createTeacherFromInvite(
+        inviteCode: _code.text,
+        schoolId: _schoolId.text.trim(),
+        teacher: User(
           username: service.normalizeUsername(_username.text),
           password: PasswordUtils.hashPassword(_password.text),
           fullName: _name.text.trim(),
@@ -81,6 +79,13 @@ class _TeacherSetupPageState extends State<TeacherSetupPage> {
               controller: _code,
               decoration: const InputDecoration(labelText: 'Código SQ-XXXX-XXXX'),
               validator: (value) => value == null || value.trim().isEmpty ? 'Informe o código.' : null,
+            ),
+            TextFormField(
+              controller: _schoolId,
+              decoration: const InputDecoration(labelText: 'Identificador da escola'),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Informe a escola vinculada ao convite.'
+                  : null,
             ),
             TextFormField(
               controller: _name,

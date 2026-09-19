@@ -4,6 +4,7 @@ import 'package:sqeducaplay/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/password_utils.dart';
 import 'dart:convert';
+import '../models/teacher_invite_model.dart';
 
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._init();
@@ -12,6 +13,7 @@ class AppDatabase {
   // usamos um fallback em memória para permitir funcionalidades básicas.
   bool _dbAvailable = true;
   final List<User> _inMemoryUsers = [];
+  final List<TeacherInvite> _inMemoryInvites = [];
   int _inMemoryNextId = 100000; // ids gerados para usuários em memória
 
   // Detectar se estamos no web: se sim, marcar DB como indisponível para evitar
@@ -31,7 +33,7 @@ class AppDatabase {
     try {
       return await openDatabase(
         path,
-        version: 4,
+        version: 5,
         onCreate: _createDB,
         onUpgrade: (Database db, int oldVersion, int newVersion) async {
           // Upgrade path: v1 -> v2 add profilePhotoPath column to users
@@ -55,20 +57,34 @@ class AppDatabase {
                 );
               }
             }
-            if (oldVersion < 4) {
-              for (final statement in [
-                'ALTER TABLE users ADD COLUMN consentAt TEXT',
-                'ALTER TABLE users ADD COLUMN consentVersion TEXT',
-                'ALTER TABLE users ADD COLUMN isApproved INTEGER NOT NULL DEFAULT 1',
-              ]) {
-                try {
-                  await db.execute(statement);
-                } catch (_) {}
-              }
-              await db.rawUpdate(
-                "UPDATE users SET isApproved = 0 WHERE role = 'student'",
-              );
+          }
+          if (oldVersion < 4) {
+            for (final statement in [
+              'ALTER TABLE users ADD COLUMN consentAt TEXT',
+              'ALTER TABLE users ADD COLUMN consentVersion TEXT',
+              'ALTER TABLE users ADD COLUMN isApproved INTEGER NOT NULL DEFAULT 1',
+            ]) {
+              try {
+                await db.execute(statement);
+              } catch (_) {}
             }
+            await db.rawUpdate(
+              "UPDATE users SET isApproved = 0 WHERE role = 'student'",
+            );
+          }
+          if (oldVersion < 5) {
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS teacher_invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL UNIQUE,
+                schoolId TEXT NOT NULL,
+                createdByUsername TEXT,
+                createdAt TEXT NOT NULL,
+                expiresAt TEXT NOT NULL,
+                isUsed INTEGER NOT NULL DEFAULT 0,
+                usedByUserId INTEGER
+              )
+            ''');
           }
         },
         onOpen: (Database db) async {
@@ -213,6 +229,19 @@ class AppDatabase {
         updatedAt TEXT NOT NULL,
         UNIQUE(userId),
         FOREIGN KEY (userId) REFERENCES users (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE teacher_invites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        schoolId TEXT NOT NULL,
+        createdByUsername TEXT,
+        createdAt TEXT NOT NULL,
+        expiresAt TEXT NOT NULL,
+        isUsed INTEGER NOT NULL DEFAULT 0,
+        usedByUserId INTEGER
       )
     ''');
 
@@ -543,6 +572,84 @@ class AppDatabase {
       where: 'id = ? AND role = ?',
       whereArgs: [userId, 'student'],
     );
+  }
+
+  Future<TeacherInvite> createTeacherInvite({
+    required String code,
+    required String schoolId,
+    String? createdByUsername,
+    Duration validFor = const Duration(days: 14),
+  }) async {
+    final normalizedCode = code.trim().toUpperCase();
+    final now = DateTime.now();
+    final invite = TeacherInvite(
+      code: normalizedCode,
+      schoolId: schoolId,
+      createdByUsername: createdByUsername,
+      createdAt: now,
+      expiresAt: now.add(validFor),
+    );
+    if (!_dbAvailable) {
+      if (_inMemoryInvites.any((item) => item.code == normalizedCode)) {
+        throw ArgumentError('Código de convite já existe.');
+      }
+      _inMemoryInvites.add(invite.copyWith(id: _inMemoryInvites.length + 1));
+      return _inMemoryInvites.last;
+    }
+    final db = await database;
+    try {
+      final id = await db.insert('teacher_invites', invite.toMap()..remove('id'));
+      return invite.copyWith(id: id);
+    } catch (_) {
+      throw ArgumentError('Código de convite já existe.');
+    }
+  }
+
+  Future<TeacherInvite?> getTeacherInviteByCode(String code) async {
+    final normalizedCode = code.trim().toUpperCase();
+    if (!_dbAvailable) {
+      for (final invite in _inMemoryInvites) {
+        if (invite.code == normalizedCode) return invite;
+      }
+      return null;
+    }
+    final rows = await (await database).query(
+      'teacher_invites',
+      where: 'code = ?',
+      whereArgs: [normalizedCode],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : TeacherInvite.fromMap(rows.first);
+  }
+
+  Future<User> createTeacherFromInvite({
+    required String inviteCode,
+    required User teacher,
+    required String schoolId,
+  }) async {
+    final invite = await getTeacherInviteByCode(inviteCode);
+    if (invite == null || invite.isUsed || invite.isExpired) {
+      throw ArgumentError('Código de convite inválido, expirado ou já utilizado.');
+    }
+    if (invite.schoolId != schoolId) {
+      throw ArgumentError('O convite pertence a outra escola.');
+    }
+    if (await getUserByUsername(teacher.username) != null) {
+      throw ArgumentError('Este nome de usuário já está em uso.');
+    }
+    final created = await createUser(teacher.copy(schoolId: schoolId, role: 'teacher'));
+    if (!_dbAvailable) {
+      final index = _inMemoryInvites.indexWhere((item) => item.code == invite.code);
+      _inMemoryInvites[index] = invite.copyWith(isUsed: true, usedByUserId: created.id);
+    } else {
+      await (await database).update(
+        'teacher_invites',
+        {'isUsed': 1, 'usedByUserId': created.id},
+        where: 'code = ? AND isUsed = 0',
+        whereArgs: [invite.code],
+      );
+    }
+    return created;
   }
 
   Future<int> deleteUser(int id) async {

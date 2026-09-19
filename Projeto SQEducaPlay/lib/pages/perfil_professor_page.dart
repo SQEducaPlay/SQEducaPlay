@@ -23,11 +23,15 @@ class ProfessorDashboardPage extends StatefulWidget {
 }
 
 class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
-  late final Future<List<db_user.User>> _usersFuture;
+  late Future<List<db_user.User>> _usersFuture;
 
   @override
   void initState() {
     super.initState();
+    _reloadUsers();
+  }
+
+  void _reloadUsers() {
     _usersFuture = AppDatabase.instance.getAllUsers();
   }
 
@@ -423,10 +427,27 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
                       ? student.classGroup!
                       : 'Sem turma definida',
                 ),
-                trailing: Text(
-                  '#${studentRank['position']} • ${studentRank['points']} pts',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                trailing: student.isApproved
+                    ? Text(
+                        '#${studentRank['position']} • ${studentRank['points']} pts',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : TextButton(
+                        onPressed: student.id == null
+                            ? null
+                            : () async {
+                                await AppDatabase.instance
+                                    .approveStudent(student.id!);
+                                if (!context.mounted) return;
+                                setState(_reloadUsers);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Aluno aprovado com sucesso.'),
+                                  ),
+                                );
+                              },
+                        child: const Text('Aprovar'),
+                      ),
               );
             }),
         ],

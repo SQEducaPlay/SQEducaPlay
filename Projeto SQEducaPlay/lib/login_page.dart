@@ -9,9 +9,12 @@ import 'database/app_database.dart';
 import 'services/progresso_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/logger.dart';
+import 'utils/password_utils.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final bool initialProfessor;
+
+  const LoginPage({super.key, this.initialProfessor = true});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -33,6 +36,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    _modoProfessor = widget.initialProfessor;
     _carregarLoginSalvo();
   }
 
@@ -65,16 +69,12 @@ class _LoginPageState extends State<LoginPage> {
       final username =
           prefs.getString('login_usuario_$perfilSalvo') ?? '';
 
-      final password =
-          prefs.getString('login_senha_$perfilSalvo') ?? '';
-
       if (!mounted) return;
 
       setState(() {
         _modoProfessor = perfilSalvo == 'professor';
         _salvarSenha = true;
         _usernameController.text = username;
-        _passwordController.text = password;
       });
     } catch (e) {
       Logger.d('Erro ao carregar login salvo: $e');
@@ -99,10 +99,9 @@ class _LoginPageState extends State<LoginPage> {
           _usernameController.text.trim(),
         );
 
-        await prefs.setString(
-          'login_senha_$perfil',
-          _passwordController.text,
-        );
+        // Nunca persiste a senha. O usuário continua salvo, mas precisa
+        // informar a senha novamente após abrir o aplicativo.
+        await prefs.remove('login_senha_$perfil');
 
         await prefs.setString(
           'perfil_login',
@@ -118,9 +117,7 @@ class _LoginPageState extends State<LoginPage> {
           'login_usuario_$perfil',
         );
 
-        await prefs.remove(
-          'login_senha_$perfil',
-        );
+        await prefs.remove('login_senha_$perfil');
       }
     } catch (e) {
       Logger.d('Erro ao salvar login: $e');
@@ -179,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                 .getUserByUsername(username);
 
         if (dbUser != null &&
-            dbUser.password == password) {
+            PasswordUtils.verifyPassword(password, dbUser.password)) {
           final memUser = User(
             username: dbUser.username,
             password: dbUser.password,
@@ -190,11 +187,23 @@ class _LoginPageState extends State<LoginPage> {
             schoolId: dbUser.schoolId,
             profilePhotoPath: dbUser.profilePhotoPath,
             role: dbUser.role,
+            consentAt: dbUser.consentAt,
+            consentVersion: dbUser.consentVersion,
+            isApproved: dbUser.isApproved,
           );
 
           _userService.addUserFromDb(memUser);
 
           user = memUser;
+
+          if (PasswordUtils.needsRehash(dbUser.password) &&
+              dbUser.id != null) {
+            await AppDatabase.instance.updateUser(
+              dbUser.copy(
+                password: PasswordUtils.hashPassword(password),
+              ),
+            );
+          }
         }
       } catch (e) {
         Logger.d(
@@ -204,6 +213,7 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (user == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -218,10 +228,25 @@ class _LoginPageState extends State<LoginPage> {
     final loggedUser =
         _normalizeLoggedUser(user);
 
+    if (!_modoProfessor &&
+        loggedUser.role == 'student' &&
+        !loggedUser.isApproved) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cadastro aguardando aprovação de um professor.',
+          ),
+        ),
+      );
+      return;
+    }
+
     // Se está no modo professor,
     // o usuário precisa ser professor.
     if (_modoProfessor &&
         loggedUser.role != 'teacher') {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -237,6 +262,7 @@ class _LoginPageState extends State<LoginPage> {
     // não permite professor entrar como aluno.
     if (!_modoProfessor &&
         loggedUser.role == 'teacher') {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -294,12 +320,10 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     // ALUNO
-    final prefs =
-        await SharedPreferences.getInstance();
-
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final ano = _canonicalGrade(
-      loggedUser.grade ??
-          prefs.getString('usuario_grade'),
+      loggedUser.grade ?? prefs.getString('usuario_grade'),
     );
 
     Navigator.of(context).pushReplacement(
@@ -335,6 +359,9 @@ class _LoginPageState extends State<LoginPage> {
       schoolId: user.schoolId,
       profilePhotoPath: user.profilePhotoPath,
       role: 'teacher',
+      consentAt: user.consentAt,
+      consentVersion: user.consentVersion,
+      isApproved: user.isApproved,
     );
   }
 

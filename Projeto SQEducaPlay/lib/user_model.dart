@@ -7,6 +7,9 @@ class User {
   final String? classGroup; // Turma (ex.: 5ºA)
   final String? schoolId; // ID da escola onde o aluno estuda
   final String? profilePhotoPath; // Caminho para foto de perfil (opcional)
+  final DateTime? consentAt;
+  final String? consentVersion;
+  final bool isApproved;
   final String role; // 'admin' ou 'student'
 
   User({
@@ -18,6 +21,9 @@ class User {
     this.classGroup,
     this.schoolId,
     this.profilePhotoPath,
+    this.consentAt,
+    this.consentVersion,
+    this.isApproved = true,
     this.role = 'student', // Por padrão, usuários são estudantes
   });
 }

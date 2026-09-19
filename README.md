@@ -20,9 +20,11 @@ cd "Projeto SQEducaPlay"
 flutter build web --release
 ```
 
-O artefato gerado fica em `Projeto SQEducaPlay/build/web/`. O workflow de
-GitHub Pages em `.github/workflows/deploy-web.yml` publica esse artefato quando
-o Pages do repositório é configurado para usar GitHub Actions.
+O artefato gerado fica em `Projeto SQEducaPlay/build/web/`. O workflow
+`.github/workflows/deploy-web.yml` valida e armazena esse artefato no GitHub.
+Para publicar uma URL com GitHub Pages, o repositório precisa ter Pages
+habilitado e um plano que ofereça Pages para repositórios privados; caso
+contrário, o build continua disponível como artefato da execução.
 
 ## Funcionalidades
 

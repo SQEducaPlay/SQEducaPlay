@@ -109,6 +109,18 @@ flutter doctor
 flutter run
 ```
 
+## Demo web e builds de release
+
+A versão web publicada automaticamente pelo GitHub Pages está disponível em:
+
+**https://sqeducaplay.github.io/SQEducaPlay/**
+
+Cada push em `main` atualiza a demo. O workflow também gera o APK Android e o publica como artefato na execução do GitHub Actions. Para baixar a versão mais recente, acesse:
+
+**https://github.com/SQEducaPlay/SQEducaPlay/actions/workflows/release.yml**
+
+> O APK gerado pelo workflow é destinado a testes e distribuição direta. Para publicar na Google Play, configure um keystore de produção nos secrets do repositório (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`).
+
 ## Acesso do aluno
 
 Para acessar o app como aluno:
@@ -158,4 +170,3 @@ O projeto está em desenvolvimento contínuo, com foco em:
 ## Licença
 
 Este projeto foi desenvolvido para fins educacionais e acadêmicos. Consulte o repositório para verificar a política de uso vigente.
-

@@ -36,6 +36,24 @@ jobs:
           path: build/web
           if-no-files-found: error
 
+      - name: Configure temporary Android signing
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/release-keystore.jks \
+            -storepass android \
+            -keypass android \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=SQEducaPlay, OU=Build, O=SQEducaPlay, L=NA, S=NA, C=BR"
+          cat > android/key.properties <<'EOF'
+          storePassword=android
+          keyPassword=android
+          keyAlias=release
+          storeFile=release-keystore.jks
+          EOF
+
       - name: Build Android APK
         run: flutter build apk --release --android-skip-build-dependency-validation
 

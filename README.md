@@ -59,3 +59,11 @@ flutter test
 `Projeto SQEducaPlay/COMPARACAO-PROJETOS.md` registra o diff entre a versão
 antiga `c585150` e a versão atual do meu projeto. O repositório
 `SQEducaPlay/SQEducaPlay` é separado e não é alterado por este projeto.
+
+## Documentação da ação extensionista
+
+Os documentos da ação estão no [índice da documentação](INDICE_DOCUMENTACAO.md).
+O plano, o roteiro da oficina e o modelo de termo do responsável registram o
+status real de preparação: E.M. Manoel Muniz como escola parceira, Direção da
+escola como contato institucional e data e local ainda a confirmar. Não há
+presenças ou resultados registrados.

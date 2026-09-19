@@ -119,7 +119,7 @@ Cada push em `main` atualiza a demo. O workflow também gera o APK Android e o p
 
 **https://github.com/SQEducaPlay/SQEducaPlay/actions/workflows/release.yml**
 
-> O APK gerado pelo workflow é destinado a testes e distribuição direta. Para publicar na Google Play, configure um keystore de produção nos secrets do repositório (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`).
+> O APK gerado pelo workflow é destinado a testes e distribuição direta.
 
 ## Acesso do aluno
 

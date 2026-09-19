@@ -45,7 +45,7 @@ void main() {
   test('rejeita convite de outra escola e convite expirado', () async {
     final suffix = DateTime.now().microsecondsSinceEpoch;
     final wrongSchool = await database.createTeacherInvite(
-      code: 'SQ-WRNG-${suffix.toString().substring(0, 4)}',
+      code: 'SQ-WRNG-$suffix',
       schoolId: '2',
     );
     expect(
@@ -58,7 +58,7 @@ void main() {
     );
 
     final expired = await database.createTeacherInvite(
-      code: 'SQ-EXPR-${suffix.toString().substring(4, 8)}',
+      code: 'SQ-EXPR-${suffix + 1}',
       schoolId: '1',
       validFor: const Duration(seconds: -1),
     );

@@ -4,6 +4,7 @@ import '../database/app_database.dart';
 import '../login_page.dart';
 import '../models/user_model.dart' as db_user;
 import '../pages/ranking_tabs_page.dart';
+import '../pages/teacher_invite_page.dart';
 import '../services/progresso_service.dart';
 import '../services/background_audio_service.dart';
 import '../theme/design_tokens.dart';
@@ -58,6 +59,21 @@ class _ProfessorDashboardPageState extends State<ProfessorDashboardPage> {
                   builder: (_) => RankingTabsPage(
                     currentUsername: widget.username,
                     allowedGrades: allowedGrades,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            tooltip: 'Gerar convite de educador',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TeacherInvitePage(
+                    username: widget.username,
+                    initialSchoolId: currentUser?.schoolId,
                   ),
                 ),
               );

@@ -5,6 +5,7 @@ import '../database/app_database.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'privacy_policy_page.dart';
 
 class PrivacySettingsPage extends StatefulWidget {
   const PrivacySettingsPage({super.key});
@@ -34,6 +35,17 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             style: TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+              );
+            },
+            icon: const Icon(Icons.policy_outlined),
+            label: const Text('Ler política de privacidade'),
+          ),
+          const SizedBox(height: 8),
           SwitchListTile.adaptive(
             title: const Text('Anonimizar nomes de alunos'),
             subtitle: const Text('Exibe apelido ou Primeiro nome + inicial do sobrenome'),
@@ -117,7 +129,27 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
 
   Future<void> _exportData() async {
     final id = await _currentUserId();
-    if (id == null) return;
+    if (!mounted || id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exportar dados'),
+        content: const Text(
+          'O JSON será copiado para a área de transferência. Evite compartilhá-lo em locais públicos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Copiar JSON'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     final data = await AppDatabase.instance.exportUserData(id);
     if (!mounted || data == null) return;
     await Clipboard.setData(ClipboardData(text: jsonEncode(data)));

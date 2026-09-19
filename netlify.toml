@@ -1,0 +1,8 @@
+[build]
+  base = "Projeto SQEducaPlay"
+  publish = "build/web"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

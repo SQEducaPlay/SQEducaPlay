@@ -8,6 +8,7 @@ import 'database/app_database.dart';
 import 'package:sqeducaplay/models/user_model.dart' as db_model;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/logger.dart';
+import 'utils/password_utils.dart';
 import 'widgets/app_bar.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -94,6 +95,9 @@ class _RegisterPageState extends State<RegisterPage> {
           grade: _canonicalGrade(_selectedSerie),
           classGroup: _resolveClassGroupName(),
           schoolId: _selectedSchool?.id,
+          consentAt: DateTime.now(),
+          consentVersion: '2026-08-15',
+          isApproved: false,
         );
 
         _userService.register(newUser);
@@ -113,7 +117,7 @@ class _RegisterPageState extends State<RegisterPage> {
             created = await AppDatabase.instance.createUser(
               db_model.User(
                 username: _usernameController.text,
-                password: _passwordController.text,
+                password: PasswordUtils.hashPassword(_passwordController.text),
                 fullName: _fullNameController.text.trim(),
                 nickname: _nicknameController.text.trim().isEmpty
                     ? null
@@ -123,6 +127,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 schoolId: _selectedSchool?.id,
                 profilePhotoPath: _pickedImage?.path,
                 role: 'student',
+                consentAt: DateTime.now(),
+                consentVersion: '2026-08-15',
+                isApproved: false,
               ),
             );
 

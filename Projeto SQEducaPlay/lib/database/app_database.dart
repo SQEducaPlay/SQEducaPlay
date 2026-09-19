@@ -2,6 +2,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqeducaplay/models/user_model.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/password_utils.dart';
+import 'dart:convert';
 
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._init();
@@ -17,7 +19,6 @@ class AppDatabase {
   AppDatabase._init() {
     _dbAvailable = !kIsWeb;
   }
-
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('sqeducaplay.db');
@@ -30,7 +31,7 @@ class AppDatabase {
     try {
       return await openDatabase(
         path,
-        version: 2,
+        version: 4,
         onCreate: _createDB,
         onUpgrade: (Database db, int oldVersion, int newVersion) async {
           // Upgrade path: v1 -> v2 add profilePhotoPath column to users
@@ -38,6 +39,36 @@ class AppDatabase {
             try {
               await db.execute("ALTER TABLE users ADD COLUMN profilePhotoPath TEXT");
             } catch (_) {}
+          }
+          if (oldVersion < 3) {
+            final users = await db.query('users', columns: ['id', 'password']);
+            for (final user in users) {
+              final password = user['password'] as String?;
+              if (password != null &&
+                  !PasswordUtils.isBcryptHash(password) &&
+                  !PasswordUtils.isLegacySha256Hash(password)) {
+                await db.update(
+                  'users',
+                  {'password': PasswordUtils.hashPassword(password)},
+                  where: 'id = ?',
+                  whereArgs: [user['id']],
+                );
+              }
+            }
+            if (oldVersion < 4) {
+              for (final statement in [
+                'ALTER TABLE users ADD COLUMN consentAt TEXT',
+                'ALTER TABLE users ADD COLUMN consentVersion TEXT',
+                'ALTER TABLE users ADD COLUMN isApproved INTEGER NOT NULL DEFAULT 1',
+              ]) {
+                try {
+                  await db.execute(statement);
+                } catch (_) {}
+              }
+              await db.rawUpdate(
+                "UPDATE users SET isApproved = 0 WHERE role = 'student'",
+              );
+            }
           }
         },
         onOpen: (Database db) async {
@@ -47,7 +78,7 @@ class AppDatabase {
           if (admins.isEmpty) {
             await db.insert('users', {
               'username': 'Keinan',
-              'password': 'keinan',
+              'password': PasswordUtils.hashPassword('keinan'),
               'fullName': 'Professor Keinan',
               'role': 'teacher',
               'createdAt': DateTime.now().toIso8601String(),
@@ -75,7 +106,7 @@ class AppDatabase {
         _inMemoryUsers.add(User(
           id: _inMemoryNextId++,
           username: 'Keinan',
-          password: 'keinan',
+          password: PasswordUtils.hashPassword('keinan'),
           fullName: 'Professor Keinan',
           role: 'teacher',
           createdAt: DateTime.now(),
@@ -106,6 +137,9 @@ class AppDatabase {
         pontuacao_total INTEGER DEFAULT 0,
         estrelas_total INTEGER DEFAULT 0,
         profilePhotoPath $textNullable,
+        consentAt $textNullable,
+        consentVersion $textNullable,
+        isApproved INTEGER NOT NULL DEFAULT 1,
         createdAt TEXT NOT NULL,
         lastLogin TEXT
       )
@@ -187,7 +221,7 @@ class AppDatabase {
     // Inserir usuário admin padrão
     await db.insert('users', {
       'username': 'Keinan',
-      'password': 'keinan',
+      'password': PasswordUtils.hashPassword('keinan'),
       'fullName': 'Professor Keinan',
       'role': 'teacher',
       'createdAt': DateTime.now().toIso8601String(),
@@ -395,6 +429,9 @@ class AppDatabase {
       'classGroup': user.classGroup,
       'schoolId': user.schoolId,
       'profilePhotoPath': user.profilePhotoPath,
+      'consentAt': user.consentAt?.toIso8601String(),
+      'consentVersion': user.consentVersion,
+      'isApproved': user.isApproved ? 1 : 0,
       'role': user.role,
       'createdAt': DateTime.now().toIso8601String(),
     });
@@ -412,7 +449,7 @@ class AppDatabase {
     final db = await database;
     final maps = await db.query(
       'users',
-      columns: ['id', 'username', 'password', 'fullName', 'nickname', 'grade', 'classGroup', 'schoolId', 'role', 'pontuacao_total', 'estrelas_total', 'profilePhotoPath', 'createdAt', 'lastLogin'],
+      columns: ['id', 'username', 'password', 'fullName', 'nickname', 'grade', 'classGroup', 'schoolId', 'role', 'pontuacao_total', 'estrelas_total', 'profilePhotoPath', 'consentAt', 'consentVersion', 'isApproved', 'createdAt', 'lastLogin'],
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -435,7 +472,7 @@ class AppDatabase {
       final db = await database;
       final maps = await db.query(
         'users',
-        columns: ['id', 'username', 'password', 'fullName', 'nickname', 'grade', 'classGroup', 'schoolId', 'role', 'pontuacao_total', 'estrelas_total', 'profilePhotoPath', 'createdAt', 'lastLogin'],
+        columns: ['id', 'username', 'password', 'fullName', 'nickname', 'grade', 'classGroup', 'schoolId', 'role', 'pontuacao_total', 'estrelas_total', 'profilePhotoPath', 'consentAt', 'consentVersion', 'isApproved', 'createdAt', 'lastLogin'],
         // Busca case-insensitive por username
         where: 'LOWER(username) = ?',
         whereArgs: [username.toLowerCase()],
@@ -477,6 +514,7 @@ class AppDatabase {
         _inMemoryUsers[idx] = user;
         return 1;
       }
+
       return 0;
     }
     final db = await database;
@@ -490,6 +528,23 @@ class AppDatabase {
     );
   }
 
+  Future<int> approveStudent(int userId) async {
+    if (!_dbAvailable) {
+      final index = _inMemoryUsers.indexWhere((user) => user.id == userId);
+      if (index < 0) return 0;
+      _inMemoryUsers[index] = _inMemoryUsers[index].copy(isApproved: true);
+      return 1;
+    }
+
+    final db = await database;
+    return db.update(
+      'users',
+      {'isApproved': 1},
+      where: 'id = ? AND role = ?',
+      whereArgs: [userId, 'student'],
+    );
+  }
+
   Future<int> deleteUser(int id) async {
     if (!_dbAvailable) {
       final idx = _inMemoryUsers.indexWhere((u) => u.id == id);
@@ -497,14 +552,44 @@ class AppDatabase {
         _inMemoryUsers.removeAt(idx);
         return 1;
       }
+
       return 0;
     }
+
     final db = await database;
     return await db.delete(
       'users',
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<Map<String, dynamic>?> exportUserData(int id) async {
+    final user = await getUser(id);
+    if (user == null) return null;
+    final data = user.toMap()..remove('password');
+    if (_dbAvailable) {
+      final db = await database;
+      data['partidas'] = await db.query('partidas', where: 'usuario_id = ?', whereArgs: [id]);
+      data['user_stats'] = await db.query('user_stats', where: 'userId = ?', whereArgs: [id]);
+      data['user_progress'] = await db.query('user_progress', where: 'userId = ?', whereArgs: [id]);
+    }
+    return jsonDecode(jsonEncode(data)) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteUserData(int id) async {
+    if (!_dbAvailable) {
+      _inMemoryUsers.removeWhere((user) => user.id == id);
+      return;
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final table in ['user_stats', 'user_progress', 'user_achievements', 'user_rankings']) {
+        await txn.delete(table, where: 'userId = ?', whereArgs: [id]);
+      }
+      await txn.delete('partidas', where: 'usuario_id = ?', whereArgs: [id]);
+      await txn.delete('users', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   // Métodos para Estatísticas

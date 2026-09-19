@@ -70,6 +70,9 @@ User? login(String username, String password) {
       classGroup: newUser.classGroup,
       schoolId: newUser.schoolId,
       role: newUser.role,
+      consentAt: newUser.consentAt,
+      consentVersion: newUser.consentVersion,
+      isApproved: newUser.isApproved,
     ));
 
     _currentUsername = normalized;
@@ -99,6 +102,9 @@ User? login(String username, String password) {
       classGroup: user.classGroup,
       schoolId: user.schoolId,
       role: user.role,
+      consentAt: user.consentAt,
+      consentVersion: user.consentVersion,
+      isApproved: user.isApproved,
     );
     if (idx >= 0) {
       _users[idx] = newUser;

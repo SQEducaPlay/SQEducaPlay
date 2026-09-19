@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/privacy_settings_service.dart';
 import '../widgets/app_bar.dart';
+import '../database/app_database.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class PrivacySettingsPage extends StatefulWidget {
   const PrivacySettingsPage({super.key});
@@ -90,9 +94,66 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             },
           ),
           const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _exportData,
+            icon: const Icon(Icons.download),
+            label: const Text('Exportar meus dados (JSON)'),
+          ),
+          OutlinedButton.icon(
+            onPressed: _deleteData,
+            icon: const Icon(Icons.delete_forever),
+            label: const Text('Excluir meus dados'),
+          ),
           const Text('Dica: você pode ajustar essas preferências a qualquer momento.'),
         ],
       ),
+    );
+  }
+
+  Future<int?> _currentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('usuario_id');
+  }
+
+  Future<void> _exportData() async {
+    final id = await _currentUserId();
+    if (id == null) return;
+    final data = await AppDatabase.instance.exportUserData(id);
+    if (!mounted || data == null) return;
+    await Clipboard.setData(ClipboardData(text: jsonEncode(data)));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('JSON copiado sem incluir a senha.')),
+    );
+  }
+
+  Future<void> _deleteData() async {
+    final confirmation = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir dados'),
+        content: TextField(
+          controller: confirmation,
+          decoration: const InputDecoration(labelText: 'Digite EXCLUIR para confirmar'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, confirmation.text.trim() == 'EXCLUIR'),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    confirmation.dispose();
+    if (confirmed != true) return;
+    final id = await _currentUserId();
+    if (id == null) return;
+    await AppDatabase.instance.deleteUserData(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dados excluídos.')),
     );
   }
 }

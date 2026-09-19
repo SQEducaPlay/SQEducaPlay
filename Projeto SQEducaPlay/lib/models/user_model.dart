@@ -13,6 +13,9 @@ class User {
   final int? pontuacaoTotal;
   final int? estrelasTotal;
   final String? profilePhotoPath;
+  final DateTime? consentAt;
+  final String? consentVersion;
+  final bool isApproved;
 
   User({
     this.id,
@@ -29,6 +32,9 @@ class User {
     this.pontuacaoTotal,
     this.estrelasTotal,
     this.profilePhotoPath,
+    this.consentAt,
+    this.consentVersion,
+    this.isApproved = true,
   });
 
   User copy({
@@ -46,6 +52,9 @@ class User {
     int? pontuacaoTotal,
     int? estrelasTotal,
     String? profilePhotoPath,
+    DateTime? consentAt,
+    String? consentVersion,
+    bool? isApproved,
   }) =>
       User(
         id: id ?? this.id,
@@ -62,6 +71,9 @@ class User {
         pontuacaoTotal: pontuacaoTotal ?? this.pontuacaoTotal,
         estrelasTotal: estrelasTotal ?? this.estrelasTotal,
         profilePhotoPath: profilePhotoPath ?? this.profilePhotoPath,
+        consentAt: consentAt ?? this.consentAt,
+        consentVersion: consentVersion ?? this.consentVersion,
+        isApproved: isApproved ?? this.isApproved,
       );
 
   Map<String, dynamic> toMap() {
@@ -80,6 +92,9 @@ class User {
       'pontuacao_total': pontuacaoTotal ?? 0,
       'estrelas_total': estrelasTotal ?? 0,
       'profilePhotoPath': profilePhotoPath,
+      'consentAt': consentAt?.toIso8601String(),
+      'consentVersion': consentVersion,
+      'isApproved': isApproved ? 1 : 0,
     };
   }
 
@@ -99,6 +114,11 @@ class User {
       pontuacaoTotal: (map['pontuacao_total'] is int) ? map['pontuacao_total'] as int : ((map['pontuacao_total'] is String) ? int.tryParse(map['pontuacao_total'] as String) : 0),
       estrelasTotal: (map['estrelas_total'] is int) ? map['estrelas_total'] as int : ((map['estrelas_total'] is String) ? int.tryParse(map['estrelas_total'] as String) : 0),
       profilePhotoPath: map['profilePhotoPath'] as String?,
+      consentAt: map['consentAt'] != null
+          ? DateTime.tryParse(map['consentAt'] as String)
+          : null,
+      consentVersion: map['consentVersion'] as String?,
+      isApproved: (map['isApproved'] as int? ?? 1) == 1,
     );
   }
 }

@@ -111,9 +111,9 @@ flutter run
 
 ## Demo web e builds de release
 
-A versão web pode ser publicada no Netlify com o workflow do GitHub Actions. Depois de cadastrar o site no Netlify e configurar os secrets do repositório (`NETLIFY_AUTH_TOKEN` e `NETLIFY_SITE_ID`), a URL será do tipo:
+A versão web publicada pelo GitHub Pages está disponível em:
 
-**https://<nome-do-site>.netlify.app**
+**https://sqeducaplay.github.io/SQEducaPlay/**
 
 Cada push em `main` gera a versão web e o APK Android. Para baixar a versão mais recente do APK, acesse:
 

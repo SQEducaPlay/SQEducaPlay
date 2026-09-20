@@ -10,16 +10,17 @@ import 'package:sqeducaplay/services/user_service.dart';
 void main() {
   Future<void> pumpLoginPage(WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: LoginPage(audience: LoginAudience.student),
-      ),
+      const MaterialApp(home: LoginPage(audience: LoginAudience.student)),
     );
   }
 
   test('cria um admin de desenvolvimento padrão', () {
     final userService = UserService();
     userService.removeUser('test_admin');
-    userService.ensureDevelopmentAdmin(username: 'test_admin', password: 'test_password');
+    userService.ensureDevelopmentAdmin(
+      username: 'test_admin',
+      password: 'test_password',
+    );
 
     final user = userService.login('test_admin', 'test_password');
     expect(user, isNotNull);
@@ -48,28 +49,32 @@ void main() {
     expect(find.text('Digite sua senha para continuar.'), findsOneWidget);
   });
 
-  testWidgets('perfil admin usa AppBar com retorno habilitado e sem logout no perfil', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: AdminProfilePage()));
+  testWidgets(
+    'perfil admin usa AppBar com retorno habilitado e sem logout no perfil',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: AdminProfilePage()));
 
-    expect(find.text('Estatísticas'), findsNothing);
-    expect(find.text('Conquistas'), findsNothing);
-    expect(find.text('Histórico'), findsNothing);
+      expect(find.text('Estatísticas'), findsNothing);
+      expect(find.text('Conquistas'), findsNothing);
+      expect(find.text('Histórico'), findsNothing);
 
-    final appBar = tester.widget<AppBar>(find.byType(AppBar));
-    expect(appBar.automaticallyImplyLeading, isTrue);
-    expect(find.byIcon(Icons.logout), findsNothing);
-  });
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      expect(appBar.automaticallyImplyLeading, isTrue);
+      expect(find.byIcon(Icons.logout), findsNothing);
+    },
+  );
 
   testWidgets('salva o usuário quando a opção está marcada', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final userService = UserService();
     userService.removeUser('test_admin');
-    userService.ensureDevelopmentAdmin(username: 'test_admin', password: 'test_password');
+    userService.ensureDevelopmentAdmin(
+      username: 'test_admin',
+      password: 'test_password',
+    );
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: LoginPage(audience: LoginAudience.student),
-      ),
+      const MaterialApp(home: LoginPage(audience: LoginAudience.student)),
     );
 
     final usernameField = find.byType(TextField).first;

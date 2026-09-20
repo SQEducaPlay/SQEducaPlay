@@ -164,6 +164,18 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
+      if (loggedUser.role == 'student' && !loggedUser.isApproved) {
+        _userService.clearCurrentUser();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cadastro aguardando aprovação do educador da turma.',
+            ),
+          ),
+        );
+        return;
+      }
+
       // Persistir a sessao local somente depois de validar o tipo de acesso.
       await _criarOuBuscarUsuarioNoBanco(
         loggedUser.username,

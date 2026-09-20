@@ -12,6 +12,7 @@ import 'services/password_service.dart';
 import 'database/app_database.dart';
 import 'package:sqeducaplay/models/user_model.dart' as db_model;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'utils/logger.dart';
 
 enum LoginAudience { student, teacher }
@@ -29,8 +30,9 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _userService = UserService();
+  final _secureStorage = const FlutterSecureStorage();
   bool _obscurePassword = true;
-  bool _saveUsername = true;
+  bool _saveCredentials = true;
 
   String get _credentialSuffix => widget.audience.name;
   String get _savedUsernameKey => 'saved_username_$_credentialSuffix';
@@ -46,21 +48,46 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     final savedUsername = prefs.getString(_savedUsernameKey);
+    String? savedPassword;
+    try {
+      savedPassword = await _secureStorage.read(
+        key: 'saved_password_$_credentialSuffix',
+      );
+    } catch (e) {
+      Logger.d('Não foi possível carregar a senha salva: $e');
+    }
 
     if (savedUsername != null && savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
     }
-    await prefs.remove('saved_password_${widget.audience.name}');
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _passwordController.text = savedPassword;
+    } else {
+      _saveCredentials = false;
+    }
     setState(() {});
   }
 
   Future<void> _persistirCredenciais() async {
     final prefs = await SharedPreferences.getInstance();
 
-    if (_saveUsername) {
+    if (_saveCredentials) {
       await prefs.setString(_savedUsernameKey, _usernameController.text.trim());
+      try {
+        await _secureStorage.write(
+          key: 'saved_password_$_credentialSuffix',
+          value: _passwordController.text,
+        );
+      } catch (e) {
+        Logger.d('Não foi possível salvar a senha com segurança: $e');
+      }
     } else {
       await prefs.remove(_savedUsernameKey);
+      try {
+        await _secureStorage.delete(key: 'saved_password_$_credentialSuffix');
+      } catch (e) {
+        Logger.d('Não foi possível remover a senha salva: $e');
+      }
     }
   }
 
@@ -144,9 +171,9 @@ class _LoginPageState extends State<LoginPage> {
         loggedUser.role,
         loggedUser.grade,
       );
-      await _persistirCredenciais();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_login_audience', widget.audience.name);
+      await _persistirCredenciais();
 
       if (!mounted) return;
 
@@ -291,23 +318,27 @@ class _LoginPageState extends State<LoginPage> {
                               padding: const EdgeInsets.only(
                                 left: 10,
                                 right: 10,
-                                top: 48,
+                                top: 50,
                               ),
                               child: Column(
                                 children: [
                                   SizedBox(
                                     height: lineSpacing * 2.2,
                                     child: Center(
-                                      child: Text(
-                                        widget.audience == LoginAudience.teacher
-                                            ? 'Acesso do Educador!'
-                                            : 'Acesso do Aluno!',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.blue.shade900,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w900,
-                                          fontFamily: 'Comic Sans MS',
+                                      child: Transform.translate(
+                                        offset: const Offset(0, 5),
+                                        child: Text(
+                                          widget.audience ==
+                                                  LoginAudience.teacher
+                                              ? 'Acesso do Educador!'
+                                              : 'Acesso do Aluno!',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.blue.shade900,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w900,
+                                            fontFamily: 'Comic Sans MS',
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -354,27 +385,32 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   SizedBox(
                                     height: lineSpacing,
-                                    child: Row(
-                                      children: [
-                                        Checkbox(
-                                          value: _saveUsername,
-                                          onChanged: (value) => setState(
-                                            () =>
-                                                _saveUsername = value ?? false,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 12),
+                                      child: Row(
+                                        children: [
+                                          Checkbox(
+                                            value: _saveCredentials,
+                                            onChanged: (value) => setState(
+                                              () => _saveCredentials =
+                                                  value ?? false,
+                                            ),
+                                            activeColor: Colors.blue,
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                            visualDensity:
+                                                VisualDensity.compact,
                                           ),
-                                          activeColor: Colors.blue,
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        const Text(
-                                          'Salvar usuário',
-                                          style: TextStyle(
-                                            color: Colors.blue,
-                                            fontSize: 16,
+                                          const Text(
+                                            'Salvar acesso',
+                                            style: TextStyle(
+                                              color: Colors.blue,
+                                              fontSize: 16,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   SizedBox(

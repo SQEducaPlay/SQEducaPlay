@@ -60,7 +60,7 @@ void main() {
     expect(find.byIcon(Icons.logout), findsNothing);
   });
 
-  testWidgets('salva apenas o usuário quando a opção está marcada', (tester) async {
+  testWidgets('salva o usuário quando a opção está marcada', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final userService = UserService();
     userService.removeUser('test_admin');
@@ -83,7 +83,6 @@ void main() {
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('saved_username_student'), 'test_admin');
-    expect(prefs.getString('saved_password_student'), isNull);
     expect(prefs.getString('last_login_audience'), 'student');
 
     userService.removeUser('test_admin');

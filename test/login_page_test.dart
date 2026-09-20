@@ -18,14 +18,14 @@ void main() {
 
   test('cria um admin de desenvolvimento padrão', () {
     final userService = UserService();
-    userService.removeUser('betaprime');
-    userService.ensureDevelopmentAdmin();
+    userService.removeUser('test_admin');
+    userService.ensureDevelopmentAdmin(username: 'test_admin', password: 'test_password');
 
-    final user = userService.login('betaprime', 'betaprime10');
+    final user = userService.login('test_admin', 'test_password');
     expect(user, isNotNull);
     expect(user?.role, 'admin');
 
-    userService.removeUser('betaprime');
+    userService.removeUser('test_admin');
   });
 
   testWidgets('mostra aviso ao tentar entrar sem usuário', (tester) async {
@@ -63,8 +63,8 @@ void main() {
   testWidgets('salva credenciais quando a opção de salvar senha está marcada', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final userService = UserService();
-    userService.removeUser('betaprime');
-    userService.ensureDevelopmentAdmin();
+    userService.removeUser('test_admin');
+    userService.ensureDevelopmentAdmin(username: 'test_admin', password: 'test_password');
 
     await tester.pumpWidget(
       const MaterialApp(
@@ -75,18 +75,18 @@ void main() {
     final usernameField = find.byType(TextField).first;
     final passwordField = find.byType(TextField).at(1);
 
-    await tester.enterText(usernameField, 'betaprime');
-    await tester.enterText(passwordField, 'betaprime10');
+    await tester.enterText(usernameField, 'test_admin');
+    await tester.enterText(passwordField, 'test_password');
 
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('saved_username_student'), 'betaprime');
-    expect(prefs.getString('saved_password_student'), 'betaprime10');
+    expect(prefs.getString('saved_username_student'), 'test_admin');
+    expect(prefs.getString('saved_password_student'), 'test_password');
     expect(prefs.getString('last_login_audience'), 'student');
 
-    userService.removeUser('betaprime');
+    userService.removeUser('test_admin');
   });
 
   testWidgets('abre o login do último perfil utilizado', (tester) async {

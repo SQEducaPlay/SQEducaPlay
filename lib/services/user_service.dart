@@ -21,8 +21,8 @@ class UserService {
   }
 
   void ensureDevelopmentAdmin({
-    String username = 'betaprime',
-    String password = 'betaprime10',
+    required String username,
+    required String password,
   }) {
     final normalized = normalizeUsername(username);
     if (_users.any((user) => user.username.toLowerCase() == normalized.toLowerCase())) {

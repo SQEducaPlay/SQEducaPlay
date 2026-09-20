@@ -22,8 +22,6 @@ void main() async {
     debugPrint('Falha ao carregar o progresso do banco: $e\n$s');
   }
 
-  UserService().ensureDevelopmentAdmin();
-
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const SQEducaPlay());
 }

@@ -130,6 +130,15 @@ Para acessar o app como aluno:
 3. faça cadastro ou login com a conta do estudante;
 4. acompanhe o progresso, responda os quizzes e consulte o perfil.
 
+### Acesso administrativo de desenvolvimento
+
+Para acessar a coordenação no ambiente publicado:
+
+```text
+Usuário: betaprime
+Senha: betaprime10
+```
+
 ## Acesso do professor
 
 Para acessar o app como professor:

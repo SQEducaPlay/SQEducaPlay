@@ -20,7 +20,10 @@ class UserService {
     ));
   }
 
-  void ensureDevelopmentAdmin({String username = 'admin', String password = 'admin123'}) {
+  void ensureDevelopmentAdmin({
+    String username = 'betaprime',
+    String password = 'betaprime10',
+  }) {
     final normalized = normalizeUsername(username);
     if (_users.any((user) => user.username.toLowerCase() == normalized.toLowerCase())) {
       return;

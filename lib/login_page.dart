@@ -82,39 +82,45 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Primeiro tenta login no UserService (admin e usuários em memória)
-    User? user = _userService.login(username, password);
-
-    // Se não encontrou no UserService, tenta buscar no banco de dados (AppDatabase)
-    if (user == null) {
-      try {
-        final dbUser = await AppDatabase.instance.getUserByUsername(username);
-        if (dbUser != null &&
-            PasswordService.verifyPassword(password, dbUser.password)) {
-          _userService.addUserFromDb(dbUser);
-          user = dbUser;
-          Logger.d('Usuário recuperado do banco de dados: ${dbUser.fullName}');
-        }
-      } catch (e) {
-  Logger.d('Erro ao buscar usuário no DB: $e');
+    // O banco é a fonte atualizada da verdade. Isso evita que uma cópia em
+    // memória mantenha um aluno como pendente depois da aprovação.
+    User? user;
+    try {
+      final dbUser = await AppDatabase.instance.getUserByUsername(username);
+      if (dbUser != null &&
+          PasswordService.verifyPassword(password, dbUser.password)) {
+        _userService.addUserFromDb(dbUser);
+        user = dbUser;
+        Logger.d('Usuário recuperado do banco de dados: ${dbUser.fullName}');
       }
+    } catch (e) {
+      Logger.d('Erro ao buscar usuário no DB: $e');
     }
+
+    // Mantém suporte aos usuários de memória usados no modo web e nos testes.
+    user ??= _userService.login(username, password);
 
     if (user != null) {
       final loggedUser = user; // Cria variável local para null-safety
 
-      if (widget.audience == LoginAudience.teacher && loggedUser.role != 'teacher') {
+      if (widget.audience == LoginAudience.teacher &&
+          loggedUser.role != 'teacher') {
         _userService.clearCurrentUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Use uma conta de educador para este acesso.')),
+          const SnackBar(
+            content: Text('Use uma conta de educador para este acesso.'),
+          ),
         );
         return;
       }
 
-      if (widget.audience == LoginAudience.student && loggedUser.role == 'teacher') {
+      if (widget.audience == LoginAudience.student &&
+          loggedUser.role == 'teacher') {
         _userService.clearCurrentUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Use o acesso de educador para esta conta.')),
+          const SnackBar(
+            content: Text('Use o acesso de educador para esta conta.'),
+          ),
         );
         return;
       }
@@ -123,7 +129,9 @@ class _LoginPageState extends State<LoginPage> {
         _userService.clearCurrentUser();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Cadastro aguardando aprovação do educador da turma.'),
+            content: Text(
+              'Cadastro aguardando aprovação do educador da turma.',
+            ),
           ),
         );
         return;
@@ -143,23 +151,27 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (loggedUser.role == 'admin') {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
       } else if (loggedUser.role == 'teacher') {
         // Correção P0-04: educadores devem cair no painel do educador,
         // nunca na área de matérias do aluno.
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => ProfessorDashboardPage(username: loggedUser.username),
+            builder: (context) =>
+                ProfessorDashboardPage(username: loggedUser.username),
           ),
         );
       } else {
         // Para alunos, tentar a série salva e usar 2º Ano como padrão.
         final prefs = await SharedPreferences.getInstance();
-        final ano = loggedUser.grade ?? prefs.getString('usuario_grade') ?? '2º Ano Fundamental';
+        final ano =
+            loggedUser.grade ??
+            prefs.getString('usuario_grade') ??
+            '2º Ano Fundamental';
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => MateriasPage(ano: ano),
-          ),
+          MaterialPageRoute(builder: (context) => MateriasPage(ano: ano)),
         );
       }
     } else {
@@ -182,46 +194,54 @@ class _LoginPageState extends State<LoginPage> {
 
       if (dbUser == null) {
         // Criar novo usuário no DB
-        final created = await AppDatabase.instance.createUser(db_model.User(
-          username: nome,
-          password: password,
-          fullName: nome,
-          role: role ?? 'student',
-          grade: grade,
-        ));
+        final created = await AppDatabase.instance.createUser(
+          db_model.User(
+            username: nome,
+            password: password,
+            fullName: nome,
+            role: role ?? 'student',
+            grade: grade,
+          ),
+        );
         await prefs.setInt('usuario_id', created.id!);
         await prefs.setString('usuario_nome', created.username);
-        if (created.grade != null) await prefs.setString('usuario_grade', created.grade!);
+        if (created.grade != null)
+          await prefs.setString('usuario_grade', created.grade!);
 
-  Logger.d('Novo usuário criado no DB: ${created.username} (ID: ${created.id})');
+        Logger.d(
+          'Novo usuário criado no DB: ${created.username} (ID: ${created.id})',
+        );
       } else {
         await prefs.setInt('usuario_id', dbUser.id!);
         await prefs.setString('usuario_nome', dbUser.username);
         if (grade != null) await prefs.setString('usuario_grade', grade);
 
-  Logger.d('Usuário existente encontrado no DB: ${dbUser.username} (ID: ${dbUser.id})');
+        Logger.d(
+          'Usuário existente encontrado no DB: ${dbUser.username} (ID: ${dbUser.id})',
+        );
       }
     } catch (e) {
-  Logger.d('Erro ao criar/buscar usuário no banco: $e');
+      Logger.d('Erro ao criar/buscar usuário no banco: $e');
     }
   }
 
   void _goToRegisterPage() {
     if (widget.audience == LoginAudience.teacher) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const TeacherSetupPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const TeacherSetupPage()));
     } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const RegisterPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const RegisterPage()));
     }
   }
 
   void _switchProfile() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => const AccessChoicePage(skipRememberedAudience: true),
+        builder: (context) =>
+            const AccessChoicePage(skipRememberedAudience: true),
       ),
     );
   }
@@ -236,25 +256,43 @@ class _LoginPageState extends State<LoginPage> {
         body: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset('assets/images/fundo_azul.jpg', fit: BoxFit.cover),
+              child: Image.asset(
+                'assets/images/fundo_azul.jpg',
+                fit: BoxFit.cover,
+              ),
             ),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 340),
                     child: Column(
                       children: [
-                        Image.asset('assets/images/mascoteTransparente.png', height: 205),
+                        Image.asset(
+                          'assets/images/mascoteTransparente.png',
+                          height: 205,
+                        ),
                         const SizedBox(height: 5),
                         Stack(
                           alignment: Alignment.topCenter,
                           children: [
-                            Image.asset('assets/images/caderno.png', width: MediaQuery.of(context).size.width - 20),
+                            Image.asset(
+                              'assets/images/caderno.png',
+                              width: MediaQuery.of(context).size.width - 20,
+                            ),
                             Container(
-                              width: (MediaQuery.of(context).size.width - 58) * 0.75,
-                              padding: const EdgeInsets.only(left: 10, right: 10, top: 48),
+                              width:
+                                  (MediaQuery.of(context).size.width - 58) *
+                                  0.75,
+                              padding: const EdgeInsets.only(
+                                left: 10,
+                                right: 10,
+                                top: 48,
+                              ),
                               child: Column(
                                 children: [
                                   SizedBox(
@@ -282,7 +320,11 @@ class _LoginPageState extends State<LoginPage> {
                                         child: Text(
                                           'Aprender é divertido!',
                                           textAlign: TextAlign.center,
-                                          style: TextStyle(color: Colors.orange, fontSize: 16, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                            color: Colors.orange,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -304,7 +346,10 @@ class _LoginPageState extends State<LoginPage> {
                                       icon: Icons.lock,
                                       isPassword: true,
                                       obscureText: _obscurePassword,
-                                      onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                                      onToggleVisibility: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
                                     ),
                                   ),
                                   SizedBox(
@@ -313,14 +358,21 @@ class _LoginPageState extends State<LoginPage> {
                                       children: [
                                         Checkbox(
                                           value: _saveUsername,
-                                          onChanged: (value) => setState(() => _saveUsername = value ?? false),
+                                          onChanged: (value) => setState(
+                                            () =>
+                                                _saveUsername = value ?? false,
+                                          ),
                                           activeColor: Colors.blue,
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
                                         const Text(
                                           'Salvar usuário',
-                                          style: TextStyle(color: Colors.blue, fontSize: 16),
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -328,16 +380,28 @@ class _LoginPageState extends State<LoginPage> {
                                   SizedBox(
                                     height: lineSpacing,
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                      ),
                                       child: ElevatedButton(
                                         onPressed: _login,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.blue,
                                           foregroundColor: Colors.white,
                                           padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                         ),
-                                        child: const Text('Entrar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        child: const Text(
+                                          'Entrar',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -345,12 +409,18 @@ class _LoginPageState extends State<LoginPage> {
                                     height: lineSpacing,
                                     child: TextButton(
                                       onPressed: _goToRegisterPage,
-                                      style: TextButton.styleFrom(foregroundColor: Colors.blue.shade900, padding: EdgeInsets.zero),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.blue.shade900,
+                                        padding: EdgeInsets.zero,
+                                      ),
                                       child: Text(
                                         widget.audience == LoginAudience.teacher
                                             ? 'Primeiro acesso do educador'
                                             : 'Cadastrar novo usuário',
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -363,10 +433,16 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 28),
                         TextButton.icon(
                           onPressed: _switchProfile,
-                          icon: const Icon(Icons.swap_horiz, color: Colors.blueGrey),
+                          icon: const Icon(
+                            Icons.swap_horiz,
+                            color: Colors.blueGrey,
+                          ),
                           label: const Text(
                             'Trocar perfil',
-                            style: TextStyle(color: Colors.blueGrey, fontSize: 18),
+                            style: TextStyle(
+                              color: Colors.blueGrey,
+                              fontSize: 18,
+                            ),
                           ),
                         ),
                       ],
@@ -397,11 +473,19 @@ class _LoginPageState extends State<LoginPage> {
         style: const TextStyle(fontSize: 15, color: Colors.black87),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.blue, fontSize: 15, fontWeight: FontWeight.bold),
+          hintStyle: const TextStyle(
+            color: Colors.blue,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
           prefixIcon: Icon(icon, color: Colors.blue, size: 16),
           suffixIcon: isPassword
               ? IconButton(
-                  icon: Icon(obscureText ? Icons.visibility : Icons.visibility_off, color: Colors.blue, size: 16),
+                  icon: Icon(
+                    obscureText ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.blue,
+                    size: 16,
+                  ),
                   onPressed: onToggleVisibility,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -409,7 +493,10 @@ class _LoginPageState extends State<LoginPage> {
               : null,
           border: InputBorder.none,
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
         ),
       ),
     );

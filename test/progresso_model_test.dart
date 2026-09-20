@@ -49,10 +49,10 @@ void main() {
   });
 
   test('avanca de nivel ao atingir a pontuacao necessaria', () {
-    final progresso = ProgressoAluno(username: 'aluno', pontuacaoTotal: 150);
+    final progresso = ProgressoAluno(username: 'aluno', pontuacaoTotal: 1050);
 
     expect(progresso.nivel, 'Iniciante');
-    expect(progresso.proximoNivelPontos, 350);
+    expect(progresso.proximoNivelPontos, 1850);
     expect(progresso.progressoNivel, 0);
   });
 }

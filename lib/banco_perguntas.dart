@@ -7,7 +7,29 @@ class BancoPerguntas {
     return '$value Fundamental';
   }
 
-  static Map<String, Map<String, Map<String, List<Map<String, dynamic>>>>> perguntas = {
+  static String _difficultyForGrade(String grade) {
+    if (grade.startsWith('2º')) return 'facil';
+    if (grade.startsWith('5º')) return 'dificil';
+    return 'media';
+  }
+
+  static List<Map<String, dynamic>> _withDifficulty(
+    Iterable<Map<String, dynamic>> source,
+    String grade,
+  ) {
+    final difficulty = _difficultyForGrade(grade);
+    return source
+        .map(
+          (question) => {
+            ...question,
+            'dificuldade': question['dificuldade'] ?? difficulty,
+          },
+        )
+        .toList();
+  }
+
+  static Map<String, Map<String, Map<String, List<Map<String, dynamic>>>>>
+  perguntas = {
     'Matemática': {
       '2º Ano Fundamental': {
         'Números até 1000': [
@@ -49,7 +71,8 @@ class BancoPerguntas {
             'resposta': '25',
           },
           {
-            'pergunta': 'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
+            'pergunta':
+                'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
             'opcoes': ['12', '15', '18', '20'],
             'resposta': '15',
           },
@@ -250,7 +273,8 @@ class BancoPerguntas {
             'resposta': '1/4',
           },
           {
-            'pergunta': 'Se uma pizza tem 8 pedaços e você come 2, que fração você comeu?',
+            'pergunta':
+                'Se uma pizza tem 8 pedaços e você come 2, que fração você comeu?',
             'opcoes': ['1/8', '2/8', '3/8', '4/8'],
             'resposta': '2/8',
           },
@@ -270,7 +294,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Como se lê 7.809?',
-            'opcoes': ['Sete mil e oitenta e nove', 'Setecentos e oitenta e nove', 'Sete mil, oitocentos e nove', 'Setenta e oito mil e nove'],
+            'opcoes': [
+              'Sete mil e oitenta e nove',
+              'Setecentos e oitenta e nove',
+              'Sete mil, oitocentos e nove',
+              'Setenta e oito mil e nove',
+            ],
             'resposta': 'Sete mil, oitocentos e nove',
           },
           {
@@ -389,7 +418,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Como se escreve por extenso 52.408?',
-            'opcoes': ['Cinquenta e dois mil e quarenta e oito', 'Cinquenta e dois mil, quatrocentos e oito', 'Cinco mil, duzentos e quarenta e oito', 'Quinhentos e vinte e quatro mil e oito'],
+            'opcoes': [
+              'Cinquenta e dois mil e quarenta e oito',
+              'Cinquenta e dois mil, quatrocentos e oito',
+              'Cinco mil, duzentos e quarenta e oito',
+              'Quinhentos e vinte e quatro mil e oito',
+            ],
             'resposta': 'Cinquenta e dois mil, quatrocentos e oito',
           },
           {
@@ -493,7 +527,8 @@ class BancoPerguntas {
             'resposta': '40',
           },
           {
-            'pergunta': 'Qual é o perímetro de um triângulo com lados 5, 6 e 7?',
+            'pergunta':
+                'Qual é o perímetro de um triângulo com lados 5, 6 e 7?',
             'opcoes': ['16', '17', '18', '19'],
             'resposta': '18',
           },
@@ -512,9 +547,10 @@ class BancoPerguntas {
     },
     'Português': {
       '2º Ano Fundamental': {
-  'Leitura/escuta e interpretação': [
+        'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'Em um poema, palavras que têm sons parecidos no final chamam-se:',
+            'pergunta':
+                'Em um poema, palavras que têm sons parecidos no final chamam-se:',
             'opcoes': ['Rimas', 'Versos', 'Estrofes', 'Títulos'],
             'resposta': 'Rimas',
           },
@@ -539,12 +575,13 @@ class BancoPerguntas {
             'resposta': 'Deixar recado',
           },
           {
-            'pergunta': 'Em qual tipo de texto encontramos uma lição moral no final?',
+            'pergunta':
+                'Em qual tipo de texto encontramos uma lição moral no final?',
             'opcoes': ['Bilhete', 'Fábula', 'Carta', 'Lista'],
             'resposta': 'Fábula',
           },
         ],
-  'Análise linguística/semiótica (ortografia e pontuação)': [
+        'Análise linguística/semiótica (ortografia e pontuação)': [
           {
             'pergunta': 'Qual palavra usa o dígrafo CH?',
             'opcoes': ['Carro', 'Chocolate', 'Sapato', 'Mesa'],
@@ -581,7 +618,7 @@ class BancoPerguntas {
             'resposta': 'Mãos',
           },
         ],
-  'Análise linguística/semiótica (vocabulário)': [
+        'Análise linguística/semiótica (vocabulário)': [
           {
             'pergunta': 'O que é o contrário de "alto"?',
             'opcoes': ['Baixo', 'Grande', 'Pequeno', 'Gordo'],
@@ -612,18 +649,26 @@ class BancoPerguntas {
       '3º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'Na frase "O gato dorme no tapete", quem realiza a ação?',
+            'pergunta':
+                'Na frase "O gato dorme no tapete", quem realiza a ação?',
             'opcoes': ['O gato', 'O tapete', 'Dormir', 'A ação'],
             'resposta': 'O gato',
           },
           {
-            'pergunta': 'Se "Ana levou um guarda-chuva", o tempo provavelmente estava:',
+            'pergunta':
+                'Se "Ana levou um guarda-chuva", o tempo provavelmente estava:',
             'opcoes': ['Ensolarado', 'Chuvoso', 'Nevando', 'Seco'],
             'resposta': 'Chuvoso',
           },
           {
-            'pergunta': 'Qual é a ideia principal de "Pedro comeu uma maçã no lanche"?',
-            'opcoes': ['Pedro comprou uma maçã', 'Pedro comeu uma maçã', 'Pedro guardou a maçã', 'Pedro jogou a maçã'],
+            'pergunta':
+                'Qual é a ideia principal de "Pedro comeu uma maçã no lanche"?',
+            'opcoes': [
+              'Pedro comprou uma maçã',
+              'Pedro comeu uma maçã',
+              'Pedro guardou a maçã',
+              'Pedro jogou a maçã',
+            ],
             'resposta': 'Pedro comeu uma maçã',
           },
           {
@@ -633,11 +678,16 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Qual a função de um texto instrucional?',
-            'opcoes': ['Ensinar fazer algo', 'Contar história', 'Vender produto', 'Fazer piada'],
+            'opcoes': [
+              'Ensinar fazer algo',
+              'Contar história',
+              'Vender produto',
+              'Fazer piada',
+            ],
             'resposta': 'Ensinar fazer algo',
           },
         ],
-  'Análise linguística/semiótica (ortografia)': [
+        'Análise linguística/semiótica (ortografia)': [
           {
             'pergunta': 'Qual palavra está escrita corretamente?',
             'opcoes': ['Exenplo', 'Exemplo', 'Ezemplo', 'Exsemplo'],
@@ -669,7 +719,7 @@ class BancoPerguntas {
             'resposta': 'Cabeça',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
             'pergunta': 'Para começar um texto narrativo, usamos:',
             'opcoes': ['Era uma vez', 'Em conclusão', 'Por isso', 'Finalmente'],
@@ -677,7 +727,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'Um parágrafo começa com:',
-            'opcoes': ['Vírgula', 'Ponto final', 'Espaço maior', 'Letra minúscula'],
+            'opcoes': [
+              'Vírgula',
+              'Ponto final',
+              'Espaço maior',
+              'Letra minúscula',
+            ],
             'resposta': 'Espaço maior',
           },
           {
@@ -695,17 +750,25 @@ class BancoPerguntas {
       '4º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'Em "O time venceu porque treinou muito", qual é a causa da vitória?',
-            'opcoes': ['O time venceu', 'Treinou muito', 'O time perdeu', 'Não treinou'],
+            'pergunta':
+                'Em "O time venceu porque treinou muito", qual é a causa da vitória?',
+            'opcoes': [
+              'O time venceu',
+              'Treinou muito',
+              'O time perdeu',
+              'Não treinou',
+            ],
             'resposta': 'Treinou muito',
           },
           {
-            'pergunta': 'Na frase "Embora estivesse cansado, João estudou", a conjunção indica:',
+            'pergunta':
+                'Na frase "Embora estivesse cansado, João estudou", a conjunção indica:',
             'opcoes': ['Causa', 'Concessão', 'Conclusão', 'Comparação'],
             'resposta': 'Concessão',
           },
           {
-            'pergunta': 'O que conclui a frase: "Carla levou casaco e guarda-chuva, então..."',
+            'pergunta':
+                'O que conclui a frase: "Carla levou casaco e guarda-chuva, então..."',
             'opcoes': ['Está calor', 'Vai chover', 'Vai nevar', 'Está seco'],
             'resposta': 'Vai chover',
           },
@@ -721,11 +784,16 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'O que é uma "moral da história"?',
-            'opcoes': ['O início', 'A lição aprendida', 'O personagem', 'O local'],
+            'opcoes': [
+              'O início',
+              'A lição aprendida',
+              'O personagem',
+              'O local',
+            ],
             'resposta': 'A lição aprendida',
           },
         ],
-  'Análise linguística/semiótica (ortografia)': [
+        'Análise linguística/semiótica (ortografia)': [
           {
             'pergunta': 'Qual palavra usa "Ç"?',
             'opcoes': ['Camiseta', 'Coração', 'Cavalo', 'Carro'],
@@ -757,10 +825,15 @@ class BancoPerguntas {
             'resposta': 'à',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
             'pergunta': 'Em um texto argumentativo, devemos:',
-            'opcoes': ['Defender uma ideia', 'Contar piada', 'Fazer lista', 'Desenhar'],
+            'opcoes': [
+              'Defender uma ideia',
+              'Contar piada',
+              'Fazer lista',
+              'Desenhar',
+            ],
             'resposta': 'Defender uma ideia',
           },
           {
@@ -775,7 +848,12 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'O que é um texto instrucional?',
-            'opcoes': ['Ensina fazer algo', 'Conta história', 'Dá notícia', 'Faz propaganda'],
+            'opcoes': [
+              'Ensina fazer algo',
+              'Conta história',
+              'Dá notícia',
+              'Faz propaganda',
+            ],
             'resposta': 'Ensina fazer algo',
           },
         ],
@@ -783,18 +861,31 @@ class BancoPerguntas {
       '5º Ano Fundamental': {
         'Leitura/escuta e interpretação': [
           {
-            'pergunta': 'No trecho "A leitura amplia o conhecimento", qual é o efeito apresentado?',
+            'pergunta':
+                'No trecho "A leitura amplia o conhecimento", qual é o efeito apresentado?',
             'opcoes': ['Causa', 'Amplia conhecimento', 'Tempo', 'Lugar'],
             'resposta': 'Amplia conhecimento',
           },
           {
-            'pergunta': 'O que melhor resume: "Após estudar, Lucas resolveu o problema com facilidade"?',
-            'opcoes': ['Lucas não estudou', 'Estudar ajudou Lucas', 'O problema era impossível', 'Lucas adivinhou'],
+            'pergunta':
+                'O que melhor resume: "Após estudar, Lucas resolveu o problema com facilidade"?',
+            'opcoes': [
+              'Lucas não estudou',
+              'Estudar ajudou Lucas',
+              'O problema era impossível',
+              'Lucas adivinhou',
+            ],
             'resposta': 'Estudar ajudou Lucas',
           },
           {
-            'pergunta': 'Em "Se houvesse silêncio, a concentração aumentaria", qual relação há entre as orações?',
-            'opcoes': ['Causa e efeito', 'Comparação', 'Exemplificação', 'Conclusão'],
+            'pergunta':
+                'Em "Se houvesse silêncio, a concentração aumentaria", qual relação há entre as orações?',
+            'opcoes': [
+              'Causa e efeito',
+              'Comparação',
+              'Exemplificação',
+              'Conclusão',
+            ],
             'resposta': 'Causa e efeito',
           },
           {
@@ -804,11 +895,16 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'O que é discurso direto?',
-            'opcoes': ['Narrador conta', 'Personagem fala', 'Descrição', 'Conclusão'],
+            'opcoes': [
+              'Narrador conta',
+              'Personagem fala',
+              'Descrição',
+              'Conclusão',
+            ],
             'resposta': 'Personagem fala',
           },
         ],
-  'Produção de textos': [
+        'Produção de textos': [
           {
             'pergunta': 'Em uma carta formal, devemos usar:',
             'opcoes': ['Gírias', 'Linguagem culta', 'Desenhos', 'Abreviações'],
@@ -816,12 +912,22 @@ class BancoPerguntas {
           },
           {
             'pergunta': 'O que caracteriza um texto expositivo?',
-            'opcoes': ['Apresenta informações', 'Conta história', 'Diverte', 'Vende produto'],
+            'opcoes': [
+              'Apresenta informações',
+              'Conta história',
+              'Diverte',
+              'Vende produto',
+            ],
             'resposta': 'Apresenta informações',
           },
           {
             'pergunta': 'Em um debate, é importante:',
-            'opcoes': ['Gritar', 'Argumentar com respeito', 'Interromper', 'Brigar'],
+            'opcoes': [
+              'Gritar',
+              'Argumentar com respeito',
+              'Interromper',
+              'Brigar',
+            ],
             'resposta': 'Argumentar com respeito',
           },
           {
@@ -850,7 +956,9 @@ class BancoPerguntas {
         var anoData = materiaData[anoNormalizado];
         if (anoData != null) {
           anoData.forEach((_, perguntasTopico) {
-            todasPerguntas.addAll(perguntasTopico);
+            todasPerguntas.addAll(
+              _withDifficulty(perguntasTopico, anoNormalizado),
+            );
           });
         }
       }
@@ -859,7 +967,9 @@ class BancoPerguntas {
 
     // Retorna perguntas do tópico específico
     try {
-      return perguntas[materia]?[anoNormalizado]?[topico] ?? [];
+      final perguntasDoTopico =
+          perguntas[materia]?[anoNormalizado]?[topico] ?? [];
+      return _withDifficulty(perguntasDoTopico, anoNormalizado);
     } catch (e) {
       return [];
     }

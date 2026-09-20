@@ -39,7 +39,9 @@ class PerfilAlunoPage extends StatefulWidget {
 }
 
 class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
-  final _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+  final _confettiController = ConfettiController(
+    duration: const Duration(seconds: 2),
+  );
   final _player = AudioPlayer();
   final _picker = ImagePicker();
   late final Future<List<Map<String, dynamic>>> _historicoFuture;
@@ -50,7 +52,13 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     super.initState();
     _historicoFuture = _carregarHistorico(widget.username);
     _carregarAvatar();
+    _carregarProgressoAtualizado();
     _tryCelebrate();
+  }
+
+  Future<void> _carregarProgressoAtualizado() async {
+    await ProgressoService().carregarDoBanco();
+    if (mounted) setState(() {});
   }
 
   Future<void> _carregarAvatar() async {
@@ -73,10 +81,16 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
 
     final progressoService = ProgressoService();
     final conquistas = progressoService.getConquistas(widget.username);
-    final desbloqueadas = conquistas.values.where((c) => c.desbloqueada).map((c) => c.tipo.toString()).toList();
+    final desbloqueadas = conquistas.values
+        .where((c) => c.desbloqueada)
+        .map((c) => c.tipo.toString())
+        .toList();
 
     final celebration = CelebrationService();
-    final novas = await celebration.getNewlyUnlockedKeys(widget.username, desbloqueadas);
+    final novas = await celebration.getNewlyUnlockedKeys(
+      widget.username,
+      desbloqueadas,
+    );
     if (novas.isEmpty) return;
 
     if (privacy.enableConfetti) {
@@ -97,11 +111,15 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     final posicaoRanking = progressoService.getPosicaoRanking(widget.username);
     final user = UserService().getUserByUsername(widget.username);
     final privacy = PrivacySettingsService();
-    final schoolName = (user?.schoolId != null && privacy.showSchoolInStudentRanking)
-        ? (SchoolService().getSchoolById(user!.schoolId!)?.name ?? 'Escola não encontrada')
+    final schoolName =
+        (user?.schoolId != null && privacy.showSchoolInStudentRanking)
+        ? (SchoolService().getSchoolById(user!.schoolId!)?.name ??
+              'Escola não encontrada')
         : null;
 
-    final conquistasDesbloqueadas = conquistas.values.where((c) => c.desbloqueada).toList();
+    final conquistasDesbloqueadas = conquistas.values
+        .where((c) => c.desbloqueada)
+        .toList();
 
     return DefaultTabController(
       length: 3,
@@ -141,7 +159,12 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
                 shouldLoop: false,
-                colors: const [Colors.blue, Colors.orange, Colors.green, Colors.purple],
+                colors: const [
+                  Colors.blue,
+                  Colors.orange,
+                  Colors.green,
+                  Colors.purple,
+                ],
                 numberOfParticles: 30,
                 gravity: 0.6,
               ),
@@ -162,7 +185,9 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     required int posicaoRanking,
     required PrivacySettingsService privacy,
   }) {
-    final conquistasBloqueadas = conquistas.values.where((c) => !c.desbloqueada).toList();
+    final conquistasBloqueadas = conquistas.values
+        .where((c) => !c.desbloqueada)
+        .toList();
     final progressoNivel = (progresso.progressoNivel / 100).clamp(0.0, 1.0);
     final totalPontosJogos = progresso.pontosPorMateria.values.fold<int>(
       0,
@@ -206,7 +231,11 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.school, size: 16, color: Colors.blueGrey),
+                      const Icon(
+                        Icons.school,
+                        size: 16,
+                        color: Colors.blueGrey,
+                      ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -225,7 +254,10 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                   ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _getCorNivel(progresso.nivel),
                     borderRadius: BorderRadius.circular(20),
@@ -312,7 +344,10 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                         Colors.purple,
                         onTap: conquistasBloqueadas.isEmpty
                             ? null
-                            : () => _showConquistasBloqueadas(context, conquistasBloqueadas),
+                            : () => _showConquistasBloqueadas(
+                                context,
+                                conquistasBloqueadas,
+                              ),
                       ),
                     ),
                   ],
@@ -417,7 +452,11 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: CardPrimary(
                   child: ListTile(
-                    leading: Icon(conquista.icone, color: conquista.cor, size: 32),
+                    leading: Icon(
+                      conquista.icone,
+                      color: conquista.cor,
+                      size: 32,
+                    ),
                     title: Text(
                       conquista.titulo,
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -429,7 +468,10 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                         if (conquista.dataDesbloqueio != null)
                           Text(
                             'Desbloqueada em: ${conquista.dataDesbloqueio!.day}/${conquista.dataDesbloqueio!.month}/${conquista.dataDesbloqueio!.year}',
-                            style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                       ],
                     ),
@@ -494,63 +536,75 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                   ),
                 )
               else
-                ...partidas.map(
-                  (partida) {
-                    final materia = partida['materia'] as String? ?? 'Sem matéria';
-                    final ano = partida['ano'] as String? ?? '';
-                    final topico = partida['topico'] as String? ?? '';
-                    final pontos = (partida['pontuacao'] as int?) ?? 0;
-                    final estrelas = (partida['estrelas'] as int?) ?? 0;
-                    final acertos = (partida['acertos'] as int?) ?? 0;
-                    final totalPerguntas = (partida['total_perguntas'] as int?) ?? 0;
-                    final tempo = _formatarTempo(partida['tempo_segundos'] as int?);
-                    final data = _formatarDataPartida(partida['data_partida'] as String?);
+                ...partidas.map((partida) {
+                  final materia =
+                      partida['materia'] as String? ?? 'Sem matéria';
+                  final ano = partida['ano'] as String? ?? '';
+                  final topico = partida['topico'] as String? ?? '';
+                  final pontos = (partida['pontuacao'] as int?) ?? 0;
+                  final estrelas = (partida['estrelas'] as int?) ?? 0;
+                  final acertos = (partida['acertos'] as int?) ?? 0;
+                  final totalPerguntas =
+                      (partida['total_perguntas'] as int?) ?? 0;
+                  final tempo = _formatarTempo(
+                    partida['tempo_segundos'] as int?,
+                  );
+                  final data = _formatarDataPartida(
+                    partida['data_partida'] as String?,
+                  );
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: CardPrimary(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: _getCorMateria(materia),
-                            child: const Icon(Icons.play_arrow, color: Colors.white),
-                          ),
-                          title: Text(
-                            ano.isNotEmpty ? '$materia • $ano' : materia,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (topico.trim().isNotEmpty) Text(topico),
-                              Text('Data: $data'),
-                              Text('Acertos: $acertos/$totalPerguntas • Tempo: $tempo'),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '+$pontos',
-                                style: TextStyle(
-                                  color: _getCorMateria(materia),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$estrelas ⭐',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: CardPrimary(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: _getCorMateria(materia),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
                           ),
                         ),
+                        title: Text(
+                          ano.isNotEmpty ? '$materia • $ano' : materia,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (topico.trim().isNotEmpty) Text(topico),
+                            Text('Data: $data'),
+                            Text(
+                              'Acertos: $acertos/$totalPerguntas • Tempo: $tempo',
+                            ),
+                          ],
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '+$pontos',
+                              style: TextStyle(
+                                color: _getCorMateria(materia),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$estrelas ⭐',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                }),
             ],
           ),
         );
@@ -582,7 +636,12 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     return '${minutos}m ${resto.toString().padLeft(2, '0')}s';
   }
 
-  Widget _buildStatItem(IconData icon, String value, String label, Color color) {
+  Widget _buildStatItem(
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -595,13 +654,7 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -662,7 +715,11 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
               ),
               if (onTap != null) ...[
                 const SizedBox(height: 2),
-                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey.shade400,
+                  size: 18,
+                ),
               ],
             ],
           ),
@@ -677,7 +734,9 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     if (numero == null) return valor;
 
     String removerDecimalInutil(String texto) {
-      return texto.endsWith(',0') ? texto.substring(0, texto.length - 2) : texto;
+      return texto.endsWith(',0')
+          ? texto.substring(0, texto.length - 2)
+          : texto;
     }
 
     String formatarNumero(double numero) {
@@ -697,7 +756,10 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
     return '${formatarNumero(abreviado)}k';
   }
 
-  Future<void> _showConquistasBloqueadas(BuildContext context, List<dynamic> conquistasBloqueadas) async {
+  Future<void> _showConquistasBloqueadas(
+    BuildContext context,
+    List<dynamic> conquistasBloqueadas,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -734,8 +796,8 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                       Text(
                         'Conquistas que faltam desbloquear',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -758,18 +820,25 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                             : ListView.separated(
                                 controller: scrollController,
                                 itemCount: conquistasBloqueadas.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 12),
                                 itemBuilder: (context, index) {
                                   final conquista = conquistasBloqueadas[index];
                                   return CardPrimary(
                                     child: ListTile(
                                       leading: CircleAvatar(
-                                        backgroundColor: conquista.cor.withValues(alpha: 0.15),
-                                        child: Icon(conquista.icone, color: conquista.cor),
+                                        backgroundColor: conquista.cor
+                                            .withValues(alpha: 0.15),
+                                        child: Icon(
+                                          conquista.icone,
+                                          color: conquista.cor,
+                                        ),
                                       ),
                                       title: Text(
                                         conquista.titulo,
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       subtitle: Text(conquista.descricao),
                                       trailing: Text(
@@ -800,17 +869,11 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
       children: [
         Text(
           valor,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -853,17 +916,17 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: cor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${taxa.toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: cor,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: cor),
                   ),
                 ),
               ],
@@ -946,11 +1009,15 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
       return;
     }
 
-    final granted = await _requestPermission(choice == 'camera' ? Permission.camera : null);
+    final granted = await _requestPermission(
+      choice == 'camera' ? Permission.camera : null,
+    );
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permissão negada para acessar a imagem.')),
+        const SnackBar(
+          content: Text('Permissão negada para acessar a imagem.'),
+        ),
       );
       return;
     }
@@ -970,15 +1037,14 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
           toolbarWidgetColor: Colors.white,
           lockAspectRatio: true,
         ),
-        IOSUiSettings(
-          title: 'Ajustar foto',
-          aspectRatioLockEnabled: true,
-        ),
+        IOSUiSettings(title: 'Ajustar foto', aspectRatioLockEnabled: true),
       ],
     );
     if (cropped == null) return;
 
-    final dbUser = await AppDatabase.instance.getUserByUsername(widget.username);
+    final dbUser = await AppDatabase.instance.getUserByUsername(
+      widget.username,
+    );
     if (dbUser == null) return;
 
     final updated = dbUser.copy(profilePhotoPath: cropped.path);
@@ -1015,13 +1081,22 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
 
   static const Map<String, _AvatarOption> _avatarOptions = {
     'book': _AvatarOption('Livro', Icons.menu_book_rounded, Colors.deepOrange),
-    'calculator': _AvatarOption('Calculadora', Icons.calculate_rounded, Colors.teal),
+    'calculator': _AvatarOption(
+      'Calculadora',
+      Icons.calculate_rounded,
+      Colors.teal,
+    ),
     'star': _AvatarOption('Estrela', Icons.star_rounded, Colors.amber),
-    'rocket': _AvatarOption('Foguete', Icons.rocket_launch_rounded, Colors.blue),
+    'rocket': _AvatarOption(
+      'Foguete',
+      Icons.rocket_launch_rounded,
+      Colors.blue,
+    ),
   };
 
   Future<bool> _requestPermission(Permission? permission) async {
-    if (permission == null) return true; // galeria usa Photo Picker, sem permissão necessária
+    if (permission == null)
+      return true; // galeria usa Photo Picker, sem permissão necessária
     final status = await permission.request();
     return status.isGranted;
   }
@@ -1057,7 +1132,6 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
         return Colors.blue;
     }
   }
-
 }
 
 String _publicName(String fullName, String? nickname, bool anonymize) {

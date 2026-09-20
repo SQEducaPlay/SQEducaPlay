@@ -3,13 +3,13 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:math' as math;
 import 'dart:convert';
-import 'login_page.dart';
 import 'banco_perguntas.dart';
 import 'services/privacy_settings_service.dart';
 import 'database/app_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/background_audio_service.dart';
 import 'services/user_service.dart';
+import 'services/quiz_scoring_service.dart';
 
 // Widget para desenhar formas geométricas
 class ShapeWidget extends StatelessWidget {
@@ -70,7 +70,12 @@ class ShapePainter extends CustomPainter {
 
       case 'retângulo':
       case 'retangulo':
-        final rect = Rect.fromLTWH(10, size.height * 0.2, size.width - 20, size.height * 0.6);
+        final rect = Rect.fromLTWH(
+          10,
+          size.height * 0.2,
+          size.width - 20,
+          size.height * 0.6,
+        );
         canvas.drawRect(rect, paint);
         canvas.drawRect(rect, strokePaint);
         break;
@@ -155,10 +160,7 @@ class FractionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(size, size),
-      painter: FractionPainter(
-        numerator: numerator,
-        denominator: denominator,
-      ),
+      painter: FractionPainter(numerator: numerator, denominator: denominator),
     );
   }
 }
@@ -224,8 +226,9 @@ class FractionPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(FractionPainter oldDelegate) => 
-    oldDelegate.numerator != numerator || oldDelegate.denominator != denominator;
+  bool shouldRepaint(FractionPainter oldDelegate) =>
+      oldDelegate.numerator != numerator ||
+      oldDelegate.denominator != denominator;
 }
 
 // Widget para mostrar operações matemáticas visualmente
@@ -233,15 +236,12 @@ class FractionPainter extends CustomPainter {
 class MathCardStyleWidget extends StatelessWidget {
   final String operation;
 
-  const MathCardStyleWidget({
-    super.key,
-    required this.operation,
-  });
+  const MathCardStyleWidget({super.key, required this.operation});
 
   @override
   Widget build(BuildContext context) {
     final parts = operation.split(' ');
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
@@ -272,8 +272,13 @@ class MathCardStyleWidget extends StatelessWidget {
 
     for (int i = 0; i < parts.length; i++) {
       final part = parts[i];
-      
-      if (part == '+' || part == '-' || part == '×' || part == 'x' || part == '÷' || part == '=') {
+
+      if (part == '+' ||
+          part == '-' ||
+          part == '×' ||
+          part == 'x' ||
+          part == '÷' ||
+          part == '=') {
         // Símbolo de operação
         widgets.add(
           Padding(
@@ -367,7 +372,12 @@ class MathOperationWidget extends StatelessWidget {
     List<Widget> widgets = [];
 
     for (var part in parts) {
-      if (part == '+' || part == '-' || part == '×' || part == 'x' || part == '÷' || part == '=') {
+      if (part == '+' ||
+          part == '-' ||
+          part == '×' ||
+          part == 'x' ||
+          part == '÷' ||
+          part == '=') {
         widgets.add(
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -500,11 +510,13 @@ class ConfettiPainter extends CustomPainter {
 
     for (int i = 0; i < confettiCount; i++) {
       final x = random.nextDouble() * size.width;
-      final y = size.height * (0.2 + 0.8 * animationValue) - random.nextDouble() * size.height * 0.2;
+      final y =
+          size.height * (0.2 + 0.8 * animationValue) -
+          random.nextDouble() * size.height * 0.2;
       final confettiSize = 5.0 + random.nextDouble() * 5.0;
-      
+
       paint.color = colors[random.nextInt(colors.length)];
-      
+
       // Desenha confetes em diferentes formatos
       if (i % 3 == 0) {
         // Círculos
@@ -512,7 +524,11 @@ class ConfettiPainter extends CustomPainter {
       } else if (i % 3 == 1) {
         // Quadrados
         canvas.drawRect(
-          Rect.fromCenter(center: Offset(x, y), width: confettiSize * 2, height: confettiSize * 2),
+          Rect.fromCenter(
+            center: Offset(x, y),
+            width: confettiSize * 2,
+            height: confettiSize * 2,
+          ),
           paint,
         );
       } else {
@@ -548,7 +564,11 @@ class ReadingActivityWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.menu_book_rounded, color: Colors.orange.shade800, size: 48),
+          Icon(
+            Icons.menu_book_rounded,
+            color: Colors.orange.shade800,
+            size: 48,
+          ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
@@ -610,7 +630,8 @@ class WordImageWidget extends StatelessWidget {
 class JogoPage extends StatefulWidget {
   final String ano;
   final String materia;
-  final String? topico; // Tópico específico da matéria (opcional para compatibilidade)
+  final String?
+  topico; // Tópico específico da matéria (opcional para compatibilidade)
 
   const JogoPage({
     super.key,
@@ -623,7 +644,11 @@ class JogoPage extends StatefulWidget {
   JogoPageState createState() => JogoPageState();
 }
 
-class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin, WidgetsBindingObserver {
+class JogoPageState extends State<JogoPage>
+    with
+        AutomaticKeepAliveClientMixin,
+        TickerProviderStateMixin,
+        WidgetsBindingObserver {
   int perguntaAtual = 0;
   bool respondeu = false;
   bool acertou = false;
@@ -631,7 +656,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   bool _bgMusicAllowed = true;
   int pontuacao = 0;
   int estrelas = 0;
-  
+
   late AnimationController _confettiController;
   late AnimationController _starController;
   late Animation<double> _starAnimation;
@@ -644,14 +669,15 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   late final FlutterTts _tts;
   bool _ttsEnabled = true;
   double _speechRate = 0.45; // velocidade do TTS (lenta por padrão)
-  List<bool?> _progresso = []; // null = não respondida, true = acerto, false = erro
+  List<bool?> _progresso =
+      []; // null = não respondida, true = acerto, false = erro
   List<String> _respostasUsuario = []; // resposta selecionada por pergunta
   int acertosConsecutivos = 0; // para avatar emocional
   String? _feedbackMsg; // mensagem curta de feedback
   Color _feedbackColor = Colors.transparent;
   bool _mostrarFeedback = false;
   bool _restoringProgress = true;
-  
+
   @override
   bool get wantKeepAlive => true;
 
@@ -660,26 +686,23 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     perguntas = _gerarPerguntas(widget.ano, widget.materia, widget.topico);
-  _progresso = List<bool?>.filled(perguntas.length, null);
+    _progresso = List<bool?>.filled(perguntas.length, null);
     _respostasUsuario = List<String>.filled(perguntas.length, '');
-    
+
     _confettiController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-    
+
     _starController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
+
     _starAnimation = Tween<double>(begin: 0.5, end: 1.2).animate(
-      CurvedAnimation(
-        parent: _starController,
-        curve: Curves.elasticOut,
-      ),
+      CurvedAnimation(parent: _starController, curve: Curves.elasticOut),
     );
-    
+
     Future.microtask(() async {
       await _restoreQuizProgress();
       await _initAudio();
@@ -689,7 +712,8 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
 
   Future<String> _quizProgressKey() async {
     final prefs = await SharedPreferences.getInstance();
-    final username = UserService().currentUser?.username ??
+    final username =
+        UserService().currentUser?.username ??
         prefs.getString('usuario_nome') ??
         'anonimo';
     return 'quiz_progress_${username}_${widget.ano}_${widget.materia}_${widget.topico ?? 'geral'}';
@@ -700,14 +724,17 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = await _quizProgressKey();
-      await prefs.setString(key, jsonEncode({
-        'perguntas': perguntas,
-        'perguntaAtual': perguntaAtual,
-        'progresso': _progresso,
-        'pontuacao': pontuacao,
-        'estrelas': estrelas,
-        'acertosConsecutivos': acertosConsecutivos,
-      }));
+      await prefs.setString(
+        key,
+        jsonEncode({
+          'perguntas': perguntas,
+          'perguntaAtual': perguntaAtual,
+          'progresso': _progresso,
+          'pontuacao': pontuacao,
+          'estrelas': estrelas,
+          'acertosConsecutivos': acertosConsecutivos,
+        }),
+      );
     } catch (_) {}
   }
 
@@ -726,7 +753,9 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           .map((item) => item as bool?)
           .toList();
       final savedIndex = saved['perguntaAtual'] as int? ?? 0;
-      if (savedQuestions.isEmpty || savedProgress.length != savedQuestions.length) return;
+      if (savedQuestions.isEmpty ||
+          savedProgress.length != savedQuestions.length)
+        return;
 
       if (mounted) {
         setState(() {
@@ -762,13 +791,19 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
       if (_bgMusicAllowed) {
         await BackgroundAudioService.instance.init();
         await BackgroundAudioService.instance.playLooped();
-        if (mounted) setState(() => _isMusicPlaying = BackgroundAudioService.instance.isPlaying);
+        if (mounted)
+          setState(
+            () => _isMusicPlaying = BackgroundAudioService.instance.isPlaying,
+          );
       }
     } catch (_) {
       _bgMusicAllowed = true;
       await BackgroundAudioService.instance.init();
       await BackgroundAudioService.instance.playLooped();
-      if (mounted) setState(() => _isMusicPlaying = BackgroundAudioService.instance.isPlaying);
+      if (mounted)
+        setState(
+          () => _isMusicPlaying = BackgroundAudioService.instance.isPlaying,
+        );
     }
   }
 
@@ -801,7 +836,9 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   }
 
   Future<void> _stopTts() async {
-    try { await _tts.stop(); } catch (_) {}
+    try {
+      await _tts.stop();
+    } catch (_) {}
   }
 
   @override
@@ -810,9 +847,15 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     _stopTts();
 
     Future.microtask(() async {
-      try { await _backgroundMusicPlayer.stop(); } catch (_) {}
-      try { await _backgroundMusicPlayer.dispose(); } catch (_) {}
-      try { await _tts.stop(); } catch (_) {}
+      try {
+        await _backgroundMusicPlayer.stop();
+      } catch (_) {}
+      try {
+        await _backgroundMusicPlayer.dispose();
+      } catch (_) {}
+      try {
+        await _tts.stop();
+      } catch (_) {}
     });
 
     try {
@@ -826,16 +869,24 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       // Pausa/parada ao ir para background
-      try { _backgroundMusicPlayer.pause(); } catch (_) {}
-      try { _victoryPlayer?.stop(); } catch (_) {}
+      try {
+        _backgroundMusicPlayer.pause();
+      } catch (_) {}
+      try {
+        _victoryPlayer?.stop();
+      } catch (_) {}
     } else if (state == AppLifecycleState.resumed) {
       // Retoma música se estava ativa
       if (!_isMusicPlaying && _bgMusicAllowed) {
-        _backgroundMusicPlayer.resume().then((_) {
-          if (mounted) setState(() => _isMusicPlaying = true);
-        }).catchError((_){});
+        _backgroundMusicPlayer
+            .resume()
+            .then((_) {
+              if (mounted) setState(() => _isMusicPlaying = true);
+            })
+            .catchError((_) {});
       }
     }
   }
@@ -847,27 +898,21 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     } catch (_) {}
 
     if (_victoryPlayer != null) {
-      try { await _victoryPlayer!.stop(); } catch (_) {}
-      try { await _victoryPlayer!.dispose(); } catch (_) {}
+      try {
+        await _victoryPlayer!.stop();
+      } catch (_) {}
+      try {
+        await _victoryPlayer!.dispose();
+      } catch (_) {}
       _victoryPlayer = null;
     }
   }
 
-  
-
-  void _toggleMusic() async {
+  Future<void> _toggleMusic() async {
     if (!_bgMusicAllowed) return;
-    if (_isMusicPlaying) {
-      _backgroundMusicPlayer.pause();
-      setState(() {
-        _isMusicPlaying = false;
-      });
-    } else {
-      _backgroundMusicPlayer.resume();
-      setState(() {
-        _isMusicPlaying = true;
-      });
-    }
+    await BackgroundAudioService.instance.toggleMute();
+    if (!mounted) return;
+    setState(() => _isMusicPlaying = BackgroundAudioService.instance.isPlaying);
   }
 
   Future<void> _playSoundEffect(String sound) async {
@@ -885,7 +930,10 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         _acertoPool!.start();
       } else {
         try {
-          _acertoPool = await AudioPool.create(source: AssetSource('sounds/acerto.mp3'), maxPlayers: 2);
+          _acertoPool = await AudioPool.create(
+            source: AssetSource('sounds/acerto.mp3'),
+            maxPlayers: 2,
+          );
           _acertoPool!.start();
         } catch (_) {}
       }
@@ -894,7 +942,10 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         _erroPool!.start();
       } else {
         try {
-          _erroPool = await AudioPool.create(source: AssetSource('sounds/erro.mp3'), maxPlayers: 2);
+          _erroPool = await AudioPool.create(
+            source: AssetSource('sounds/erro.mp3'),
+            maxPlayers: 2,
+          );
           _erroPool!.start();
         } catch (_) {}
       }
@@ -903,15 +954,21 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
       try {
         // Se já existir um player de vitória tocando, pare e descarte
         if (_victoryPlayer != null) {
-          try { await _victoryPlayer!.stop(); } catch (_) {}
-          try { await _victoryPlayer!.dispose(); } catch (_) {}
+          try {
+            await _victoryPlayer!.stop();
+          } catch (_) {}
+          try {
+            await _victoryPlayer!.dispose();
+          } catch (_) {}
         }
         final player = AudioPlayer();
         _victoryPlayer = player;
         await player.setReleaseMode(ReleaseMode.stop);
         // Ao terminar, descarte e limpe a referência
         player.onPlayerComplete.listen((event) async {
-          try { await player.dispose(); } catch (_) {}
+          try {
+            await player.dispose();
+          } catch (_) {}
           if (identical(_victoryPlayer, player)) {
             _victoryPlayer = null;
           }
@@ -923,24 +980,31 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     }
   }
 
-  List<Map<String, dynamic>> _gerarPerguntas(String ano, String materia, String? topico) {
+  List<Map<String, dynamic>> _gerarPerguntas(
+    String ano,
+    String materia,
+    String? topico,
+  ) {
     // Busca perguntas do banco de dados organizado por tópicos
-    var perguntasEncontradas = BancoPerguntas.buscarPerguntas(materia, ano, topico);
-    
+    var perguntasEncontradas = BancoPerguntas.buscarPerguntas(
+      materia,
+      ano,
+      topico,
+    );
+
     // Se encontrou perguntas no banco novo, embaralha e retorna
     if (perguntasEncontradas.isNotEmpty) {
       perguntasEncontradas.shuffle(math.Random());
-      return perguntasEncontradas;
+      return _garantirDificuldade(perguntasEncontradas);
     }
-    
+
     // Caso contrário, usa o sistema antigo (fallback para compatibilidade)
     List<Map<String, dynamic>> perguntasFallback = [];
-    
-    if (materia == 'Matemática') { 
-      
+
+    if (materia == 'Matemática') {
       if (ano == '1º Ano') {
-        perguntasFallback = [ 
-          { 
+        perguntasFallback = [
+          {
             'pergunta': 'Quanto é 1 + 2?',
             'opcoes': ['2', '3', '4', '5'],
             'resposta': '3',
@@ -1014,7 +1078,8 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             'resposta': '12',
           },
           {
-            'pergunta': 'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
+            'pergunta':
+                'Se você tem 10 balas e ganha mais 5, com quantas balas você fica?',
             'opcoes': ['12', '15', '18', '20'],
             'resposta': '15',
           },
@@ -1067,7 +1132,8 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             'resposta': '400',
           },
           {
-            'pergunta': 'Se um relógio marca 3:00, qual será o horário daqui a 45 minutos?',
+            'pergunta':
+                'Se um relógio marca 3:00, qual será o horário daqui a 45 minutos?',
             'opcoes': ['3:30', '3:45', '4:00', '4:15'],
             'resposta': '3:45',
           },
@@ -1092,7 +1158,8 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             'resposta': '8',
           },
           {
-            'pergunta': 'Se um pacote tem 6 biscoitos, quantos biscoitos há em 4 pacotes?',
+            'pergunta':
+                'Se um pacote tem 6 biscoitos, quantos biscoitos há em 4 pacotes?',
             'opcoes': ['18', '20', '24', '30'],
             'resposta': '24',
           },
@@ -1120,7 +1187,8 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             'resposta': '4/5',
           },
           {
-            'pergunta': 'Um filme começou às 14:30 e durou 1 hora e 30 minutos. Que horas ele terminou?',
+            'pergunta':
+                'Um filme começou às 14:30 e durou 1 hora e 30 minutos. Que horas ele terminou?',
             'opcoes': ['15:00', '15:30', '16:00', '16:30'],
             'resposta': '16:00',
           },
@@ -1162,41 +1230,46 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             'opcoes': ['10', '15', '20', '25'],
             'resposta': '15',
           },
-          {'pergunta': 'Qual é a raiz quadrada de 81?',
+          {
+            'pergunta': 'Qual é a raiz quadrada de 81?',
             'opcoes': ['7', '8', '9', '10'],
             'resposta': '9',
-          }, 
+          },
           {
             'pergunta': 'Quanto é 100 dividido por 4?',
             'opcoes': ['20', '25', '30', '40'],
             'resposta': '25',
           },
-          {'pergunta': 'Qual é o próximo número na sequência: 2, 4, 6, ...?',
+          {
+            'pergunta': 'Qual é o próximo número na sequência: 2, 4, 6, ...?',
             'opcoes': ['7', '8', '9', '10'],
             'resposta': '8',
           },
-          {'pergunta': 'Qual é o valor de π (pi) arredondado?',
+          {
+            'pergunta': 'Qual é o valor de π (pi) arredondado?',
             'opcoes': ['3.12', '3.14', '3.16', '3.18'],
             'resposta': '3.14',
           },
-          {'pergunta': 'Quantos lados tem um hexágono?',
+          {
+            'pergunta': 'Quantos lados tem um hexágono?',
             'opcoes': ['5', '6', '7', '8'],
             'resposta': '6',
           },
-          {'pergunta': 'Quanto é 7² (7 ao quadrado)?',
+          {
+            'pergunta': 'Quanto é 7² (7 ao quadrado)?',
             'opcoes': ['42', '47', '49', '52'],
             'resposta': '49',
           },
-          {'pergunta': 'Qual é a fração equivalente a 0,5?',
+          {
+            'pergunta': 'Qual é a fração equivalente a 0,5?',
             'opcoes': ['1/2', '1/3', '1/4', '1/5'],
             'resposta': '1/2',
           },
-          {'pergunta': 'Qual é o valor de 3³ (3 ao cubo)?',
+          {
+            'pergunta': 'Qual é o valor de 3³ (3 ao cubo)?',
             'opcoes': ['6', '9', '27', '81'],
             'resposta': '27',
           },
-         
-          
         ];
       }
     } else if (materia == 'Português') {
@@ -1378,7 +1451,12 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           },
           {
             'pergunta': 'Qual a classificação da palavra "guarda-chuva"?',
-            'opcoes': ['Substantivo simples', 'Substantivo composto', 'Adjetivo', 'Verbo'],
+            'opcoes': [
+              'Substantivo simples',
+              'Substantivo composto',
+              'Adjetivo',
+              'Verbo',
+            ],
             'resposta': 'Substantivo composto',
           },
           {
@@ -1388,7 +1466,12 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           },
           {
             'pergunta': 'O que significa a expressão "chover no molhado"?',
-            'opcoes': ['Fazer algo inútil', 'Falar de algo óbvio', 'Ter muita sorte', 'Estar muito feliz'],
+            'opcoes': [
+              'Fazer algo inútil',
+              'Falar de algo óbvio',
+              'Ter muita sorte',
+              'Estar muito feliz',
+            ],
             'resposta': 'Fazer algo inútil',
           },
           {
@@ -1398,7 +1481,12 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           },
           {
             'pergunta': 'Qual a forma correta: "fazem" ou "faz" cinco anos?',
-            'opcoes': ['Fazem', 'Faz', 'Ambas estão corretas', 'Nenhuma está correta'],
+            'opcoes': [
+              'Fazem',
+              'Faz',
+              'Ambas estão corretas',
+              'Nenhuma está correta',
+            ],
             'resposta': 'Faz',
           },
           {
@@ -1440,7 +1528,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
               'Palavra que modifica um verbo, adjetivo ou outro advérbio',
               'Palavra que substitui um substantivo',
               'Palavra que liga orações',
-              'Palavra que expressa ação'
+              'Palavra que expressa ação',
             ],
             'resposta':
                 'Palavra que modifica um verbo, adjetivo ou outro advérbio',
@@ -1456,13 +1544,18 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
               'Oração que depende de outra para fazer sentido',
               'Oração independente',
               'Oração principal',
-              'Oração sem verbo'
+              'Oração sem verbo',
             ],
             'resposta': 'Oração que depende de outra para fazer sentido',
           },
           {
             'pergunta': 'Qual é o tempo verbal de “eu cantarei”?',
-            'opcoes': ['futuro do presente', 'pretérito perfeito', 'presente', 'futuro do pretérito'],
+            'opcoes': [
+              'futuro do presente',
+              'pretérito perfeito',
+              'presente',
+              'futuro do pretérito',
+            ],
             'resposta': 'futuro do presente',
           },
           {
@@ -1471,7 +1564,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
               'Indicar quem pratica a ação do verbo',
               'Indicar a ação do verbo',
               'Indicar o local da ação',
-              'Indicar o tempo da ação'
+              'Indicar o tempo da ação',
             ],
             'resposta': 'Indicar quem pratica a ação do verbo',
           },
@@ -1486,23 +1579,42 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
 
     // Embaralha e retorna as perguntas do fallback (ou pergunta padrão)
     perguntasFallback.shuffle(math.Random());
-    return perguntasFallback.isNotEmpty ? perguntasFallback : [
-      {
-        'pergunta': 'Pergunta padrão',
-        'opcoes': ['A', 'B', 'C', 'D'],
-        'resposta': 'A',
-      },
-    ];
+    final perguntasParaJogo = perguntasFallback.isNotEmpty
+        ? perguntasFallback
+        : [
+            {
+              'pergunta': 'Pergunta padrão',
+              'opcoes': ['A', 'B', 'C', 'D'],
+              'resposta': 'A',
+            },
+          ];
+    return _garantirDificuldade(perguntasParaJogo);
+  }
+
+  List<Map<String, dynamic>> _garantirDificuldade(
+    List<Map<String, dynamic>> perguntas,
+  ) {
+    return perguntas
+        .map(
+          (pergunta) => {
+            ...pergunta,
+            // Perguntas antigas sem metadado usam média até serem classificadas.
+            'dificuldade':
+                pergunta['dificuldade'] ?? pergunta['difficulty'] ?? 'media',
+          },
+        )
+        .toList();
   }
 
   void _verificarResposta(String respostaSelecionada) async {
     // Para a leitura da pergunta ao responder
     await _stopTts();
-    
-    bool respostaCorreta = respostaSelecionada == perguntas[perguntaAtual]['resposta'];
-    
+
+    bool respostaCorreta =
+        respostaSelecionada == perguntas[perguntaAtual]['resposta'];
+
     await _playSoundEffect(respostaCorreta ? 'acerto' : 'erro');
-    
+
     setState(() {
       respondeu = true;
       acertou = respostaCorreta;
@@ -1518,26 +1630,26 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         _feedbackColor = Colors.red;
       }
       _mostrarFeedback = true;
-      
+
       // Sistema de pontuação
       if (respostaCorreta) {
-        pontuacao += 10;
+        pontuacao += QuizScoringService.pointsForDifficulty(
+          perguntas[perguntaAtual]['dificuldade'] ??
+              perguntas[perguntaAtual]['difficulty'],
+        );
         // Adiciona uma estrela a cada 30 pontos
         if (pontuacao % 30 == 0) {
           estrelas++;
           _starController.reset();
           _starController.forward();
-          
+
           // Exibe mensagem de incentivo
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
                 "Você ganhou uma estrela!",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               backgroundColor: Colors.amber,
               duration: const Duration(seconds: 2),
@@ -1549,12 +1661,12 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
             ),
           );
         }
-        
+
         // Ativa a animação de confete para respostas corretas
         _confettiController.reset();
         _confettiController.forward();
       }
-  });
+    });
     await _persistQuizProgress();
     // Oculta o feedback após curto período
     Future.delayed(const Duration(milliseconds: 1200), () {
@@ -1566,11 +1678,10 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     });
   }
 
-
   void _proximaPergunta() async {
     // Para a leitura da pergunta anterior antes de avançar
     await _stopTts();
-    
+
     if (perguntaAtual < perguntas.length - 1) {
       setState(() {
         perguntaAtual++;
@@ -1582,19 +1693,19 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     } else {
       // Finalizar o quiz - salvar no banco de dados
       await _salvarPartidaNoBanco();
-      
+
       await _backgroundMusicPlayer.stop();
       try {
         await _backgroundMusicPlayer.dispose();
       } catch (e) {
-  debugPrint('Error disposing background music player: $e');
+        debugPrint('Error disposing background music player: $e');
       }
       await _playSoundEffect('vitoria');
-      
+
       // Ativa a animação de confete para a vitória
       _confettiController.reset();
       _confettiController.forward();
-      
+
       setState(() {
         perguntaAtual++; // Trigger rebuild to show completion screen
       });
@@ -1604,53 +1715,68 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   // Verifica se a pergunta deve exibir visualização
   bool _shouldShowVisualization(String question) {
     final lowerQuestion = question.toLowerCase();
-    
+
     // Geometria
     if (_isGeometryQuestion(question)) return true;
-    
+
     // Frações
-    if (lowerQuestion.contains('fração') || lowerQuestion.contains('fracao') ||
-        lowerQuestion.contains('metade') || lowerQuestion.contains('quarto') ||
-        lowerQuestion.contains('pizza') || lowerQuestion.contains('pedaço') ||
-        lowerQuestion.contains('pedaco') || lowerQuestion.contains('/')) {
-      return true;
-    }
-    
-    // Operações matemáticas básicas
-    if ((lowerQuestion.contains('quanto é') || lowerQuestion.contains('quanto e')) &&
-        (lowerQuestion.contains('+') || lowerQuestion.contains('-') || 
-         lowerQuestion.contains('×') || lowerQuestion.contains('x ') ||
-         lowerQuestion.contains('÷') || lowerQuestion.contains('dividido'))) {
-      return true;
-    }
-    
-    // Letras do alfabeto
-    if (lowerQuestion.contains('letra') || lowerQuestion.contains('alfabeto') ||
-        lowerQuestion.contains('vogal') || lowerQuestion.contains('consoante')) {
+    if (lowerQuestion.contains('fração') ||
+        lowerQuestion.contains('fracao') ||
+        lowerQuestion.contains('metade') ||
+        lowerQuestion.contains('quarto') ||
+        lowerQuestion.contains('pizza') ||
+        lowerQuestion.contains('pedaço') ||
+        lowerQuestion.contains('pedaco') ||
+        lowerQuestion.contains('/')) {
       return true;
     }
 
-    if (lowerQuestion.contains('sílaba') || lowerQuestion.contains('silaba') ||
+    // Operações matemáticas básicas
+    if ((lowerQuestion.contains('quanto é') ||
+            lowerQuestion.contains('quanto e')) &&
+        (lowerQuestion.contains('+') ||
+            lowerQuestion.contains('-') ||
+            lowerQuestion.contains('×') ||
+            lowerQuestion.contains('x ') ||
+            lowerQuestion.contains('÷') ||
+            lowerQuestion.contains('dividido'))) {
+      return true;
+    }
+
+    // Letras do alfabeto
+    if (lowerQuestion.contains('letra') ||
+        lowerQuestion.contains('alfabeto') ||
+        lowerQuestion.contains('vogal') ||
+        lowerQuestion.contains('consoante')) {
+      return true;
+    }
+
+    if (lowerQuestion.contains('sílaba') ||
+        lowerQuestion.contains('silaba') ||
         lowerQuestion.contains('palavra')) {
       return true;
     }
-    
+
     return false;
   }
 
   // Verifica se é uma pergunta de geometria que deve exibir imagem
   bool _isGeometryQuestion(String question) {
     final geometryKeywords = [
-      'triângulo', 'triangulo',
+      'triângulo',
+      'triangulo',
       'quadrado',
-      'retângulo', 'retangulo',
-      'círculo', 'circulo',
-      'pentágono', 'pentagono',
+      'retângulo',
+      'retangulo',
+      'círculo',
+      'circulo',
+      'pentágono',
+      'pentagono',
       'lados tem',
       'cantos tem',
       'forma',
     ];
-    
+
     final lowerQuestion = question.toLowerCase();
     return geometryKeywords.any((keyword) => lowerQuestion.contains(keyword));
   }
@@ -1658,39 +1784,46 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   // Constrói a visualização apropriada baseada na pergunta
   Widget _buildQuestionVisualization(String question) {
     final lowerQuestion = question.toLowerCase();
-    
+
     // Geometria
     if (_isGeometryQuestion(question)) {
       return _buildGeometryImage(question);
     }
-    
+
     // Frações
-    if (lowerQuestion.contains('fração') || lowerQuestion.contains('fracao') ||
-        lowerQuestion.contains('metade') || lowerQuestion.contains('quarto') ||
-        lowerQuestion.contains('pizza') || lowerQuestion.contains('pedaço')) {
+    if (lowerQuestion.contains('fração') ||
+        lowerQuestion.contains('fracao') ||
+        lowerQuestion.contains('metade') ||
+        lowerQuestion.contains('quarto') ||
+        lowerQuestion.contains('pizza') ||
+        lowerQuestion.contains('pedaço')) {
       return _buildFractionImage(question);
     }
-    
+
     // Operações matemáticas
-    if ((lowerQuestion.contains('quanto é') || lowerQuestion.contains('quanto e')) &&
-        (lowerQuestion.contains('+') || lowerQuestion.contains('-') || 
-         lowerQuestion.contains('×') || lowerQuestion.contains('x ') ||
-         lowerQuestion.contains('÷'))) {
+    if ((lowerQuestion.contains('quanto é') ||
+            lowerQuestion.contains('quanto e')) &&
+        (lowerQuestion.contains('+') ||
+            lowerQuestion.contains('-') ||
+            lowerQuestion.contains('×') ||
+            lowerQuestion.contains('x ') ||
+            lowerQuestion.contains('÷'))) {
       return _buildMathOperationImage(question);
     }
-    
+
     // Letras
-    if (lowerQuestion.contains('letra') && 
+    if (lowerQuestion.contains('letra') &&
         !lowerQuestion.contains('quantas') &&
         !lowerQuestion.contains('qual é a primeira')) {
       return _buildLetterImage(question);
     }
 
-    if (lowerQuestion.contains('sílaba') || lowerQuestion.contains('silaba') ||
+    if (lowerQuestion.contains('sílaba') ||
+        lowerQuestion.contains('silaba') ||
         lowerQuestion.contains('palavra')) {
       return _buildWordImage(question);
     }
-    
+
     return const SizedBox.shrink();
   }
 
@@ -1724,26 +1857,30 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   Widget _buildGeometryImage(String question) {
     String shape = 'quadrado'; // forma padrão
     Color color = Colors.blue.shade300;
-    
+
     final lowerQuestion = question.toLowerCase();
-    
-    if (lowerQuestion.contains('triângulo') || lowerQuestion.contains('triangulo')) {
+
+    if (lowerQuestion.contains('triângulo') ||
+        lowerQuestion.contains('triangulo')) {
       shape = 'triângulo';
       color = Colors.red.shade300;
     } else if (lowerQuestion.contains('quadrado')) {
       shape = 'quadrado';
       color = Colors.blue.shade300;
-    } else if (lowerQuestion.contains('retângulo') || lowerQuestion.contains('retangulo')) {
+    } else if (lowerQuestion.contains('retângulo') ||
+        lowerQuestion.contains('retangulo')) {
       shape = 'retângulo';
       color = Colors.green.shade300;
-    } else if (lowerQuestion.contains('círculo') || lowerQuestion.contains('circulo')) {
+    } else if (lowerQuestion.contains('círculo') ||
+        lowerQuestion.contains('circulo')) {
       shape = 'círculo';
       color = Colors.orange.shade300;
-    } else if (lowerQuestion.contains('pentágono') || lowerQuestion.contains('pentagono')) {
+    } else if (lowerQuestion.contains('pentágono') ||
+        lowerQuestion.contains('pentagono')) {
       shape = 'pentágono';
       color = Colors.purple.shade300;
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1751,11 +1888,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey.shade300, width: 2),
       ),
-      child: ShapeWidget(
-        shape: shape,
-        color: color,
-        size: 100,
-      ),
+      child: ShapeWidget(shape: shape, color: color, size: 100),
     );
   }
 
@@ -1763,17 +1896,19 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   Widget _buildFractionImage(String question) {
     int numerator = 1;
     int denominator = 2;
-    
+
     final lowerQuestion = question.toLowerCase();
-    
+
     // Detecta frações específicas
     if (lowerQuestion.contains('metade') || lowerQuestion.contains('1/2')) {
       numerator = 1;
       denominator = 2;
-    } else if (lowerQuestion.contains('1/4') || lowerQuestion.contains('um quarto')) {
+    } else if (lowerQuestion.contains('1/4') ||
+        lowerQuestion.contains('um quarto')) {
       numerator = 1;
       denominator = 4;
-    } else if (lowerQuestion.contains('3/4') || lowerQuestion.contains('três quartos')) {
+    } else if (lowerQuestion.contains('3/4') ||
+        lowerQuestion.contains('três quartos')) {
       numerator = 3;
       denominator = 4;
     } else if (lowerQuestion.contains('2/8')) {
@@ -1786,7 +1921,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
       numerator = 2;
       denominator = 3;
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1820,20 +1955,20 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
   Widget _buildMathOperationImage(String question) {
     // Extrai a operação da pergunta
     String operation = '';
-    
+
     // Padrões comuns: "Quanto é 5 + 3?"
     final match = RegExp(r'(\d+)\s*([+\-×x÷])\s*(\d+)').firstMatch(question);
     if (match != null) {
       operation = '${match.group(1)} ${match.group(2)} ${match.group(3)}';
     }
-    
+
     if (operation.isEmpty) return const SizedBox.shrink();
-    
+
     // Usa o estilo especial (card com fundo creme) para todas as operações de matemática
     if (widget.materia == 'Matemática') {
       return MathCardStyleWidget(operation: operation);
     }
-    
+
     // Estilo padrão para outras matérias
     return MathOperationWidget(operation: operation);
   }
@@ -1843,28 +1978,34 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     final lowerQuestion = question.toLowerCase();
     String letter = '';
     MaterialColor colorMaterial = Colors.blue;
-    
+
     // Tenta extrair a letra da pergunta
     final letters = 'abcdefghijklmnopqrstuvwxyz';
     for (var i = 0; i < letters.length; i++) {
       final char = letters[i].toUpperCase();
-      if (lowerQuestion.contains(' $char ') || 
+      if (lowerQuestion.contains(' $char ') ||
           lowerQuestion.contains('"$char"') ||
           lowerQuestion.contains('letra $char') ||
           lowerQuestion.endsWith(' $char?')) {
         letter = char;
         // Cores variadas para cada letra
         final colors = [
-          Colors.red, Colors.blue, Colors.green, Colors.orange,
-          Colors.purple, Colors.pink, Colors.teal, Colors.indigo,
+          Colors.red,
+          Colors.blue,
+          Colors.green,
+          Colors.orange,
+          Colors.purple,
+          Colors.pink,
+          Colors.teal,
+          Colors.indigo,
         ];
         colorMaterial = colors[i % colors.length];
         break;
       }
     }
-    
+
     if (letter.isEmpty) return const SizedBox.shrink();
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1872,11 +2013,7 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: colorMaterial.shade200, width: 2),
       ),
-      child: LetterWidget(
-        letter: letter,
-        color: colorMaterial,
-        size: 80,
-      ),
+      child: LetterWidget(letter: letter, color: colorMaterial, size: 80),
     );
   }
 
@@ -1884,13 +2021,19 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     try {
       final prefs = await SharedPreferences.getInstance();
       final usuarioId = prefs.getInt('usuario_id');
-      
+
       if (usuarioId == null) {
         debugPrint('Nenhum usuário logado, partida não será salva');
         return;
       }
 
-      final totalAcertos = _progresso.where((acertou) => acertou == true).length;
+      final totalAcertos = _progresso
+          .where((acertou) => acertou == true)
+          .length;
+      pontuacao = QuizScoringService.calculateScore(
+        questions: perguntas,
+        answers: _progresso,
+      );
 
       final partidaId = await AppDatabase.instance.salvarPartida({
         'usuario_id': usuarioId,
@@ -1911,7 +2054,9 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         if (_progresso[i] == null) continue;
         tentativas.add({
           'pergunta': perguntas[i]['pergunta']?.toString() ?? '',
-          'resposta_selecionada': _respostasUsuario.length > i ? _respostasUsuario[i] : '',
+          'resposta_selecionada': _respostasUsuario.length > i
+              ? _respostasUsuario[i]
+              : '',
           'resposta_correta': perguntas[i]['resposta']?.toString() ?? '',
           'acertou': _progresso[i] == true,
           'ordem_pergunta': i,
@@ -1938,7 +2083,9 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
 
       await _clearQuizProgress();
 
-      debugPrint('Partida salva: $pontuacao pontos, $estrelas estrelas, $totalAcertos/${ perguntas.length} acertos');
+      debugPrint(
+        'Partida salva: $pontuacao pontos, $estrelas estrelas, $totalAcertos/${perguntas.length} acertos',
+      );
     } catch (e) {
       debugPrint('Erro ao salvar partida: $e');
     }
@@ -1949,11 +2096,9 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
     super.build(context); // Necessário para o AutomaticKeepAliveClientMixin
 
     if (_restoringProgress) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     // Verifica se as perguntas foram carregadas
     if (perguntas.isEmpty) {
       return PopScope(
@@ -1962,14 +2107,10 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           if (!didPop) return;
           await _stopAllAudio();
         },
-        child: const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        child: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-    
+
     if (perguntaAtual >= perguntas.length) {
       return PopScope(
         canPop: true,
@@ -1978,131 +2119,137 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
           await _stopAllAudio();
         },
         child: Scaffold(
-        appBar: AppBar(
-          title: Text('${widget.materia} - ${widget.ano}'),
-          backgroundColor: Colors.blue,
-        ),
-        body: Stack(
-          children: [
-            // Fundo colorido para atrair crianças
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.blue, Colors.lightBlueAccent],
+          appBar: AppBar(
+            title: Text('${widget.materia} - ${widget.ano}'),
+            backgroundColor: Colors.blue,
+          ),
+          body: Stack(
+            children: [
+              // Fundo colorido para atrair crianças
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.blue, Colors.lightBlueAccent],
+                  ),
                 ),
               ),
-            ),
-            
-            // Animação de confete
-            AnimatedBuilder(
-              animation: _confettiController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: ConfettiPainter(_confettiController.value),
-                  size: Size.infinite,
-                  child: Container(),
-                );
-              },
-            ),
-            
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animação de escala para o texto de parabéns
-                  TweenAnimationBuilder(
-                    tween: Tween<double>(begin: 0.5, end: 1.0),
-                    duration: const Duration(seconds: 1),
-                    curve: Curves.elasticOut,
-                    builder: (context, value, child) {
-                      return Transform.scale(
-                        scale: value,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.2 * 255).toInt()),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            '🎉 PARABÉNS! 🎉',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Você completou o quiz de ${widget.materia}!',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              color: Colors.black87,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 30),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Pontuação: $pontuacao',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      await _stopAllAudio();
-                      // Pequeno delay para garantir término do áudio
-                      await Future.delayed(const Duration(milliseconds: 80));
-                      if (!mounted) return;
-                      navigator.pop();
-                    },
-                    icon: const Icon(Icons.arrow_back, size: 24),
-                    label: const Text(
-                      'VOLTAR PARA MATÉRIAS',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                  ),
-                ],
+
+              // Animação de confete
+              AnimatedBuilder(
+                animation: _confettiController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: ConfettiPainter(_confettiController.value),
+                    size: Size.infinite,
+                    child: Container(),
+                  );
+                },
               ),
-            ),
-          ],
+
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animação de escala para o texto de parabéns
+                    TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0.5, end: 1.0),
+                      duration: const Duration(seconds: 1),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(scale: value, child: child);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(
+                                (0.2 * 255).toInt(),
+                              ),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              '🎉 PARABÉNS! 🎉',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Você completou o quiz de ${widget.materia}!',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 30,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Pontuação: $pontuacao',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        await _stopAllAudio();
+                        // Pequeno delay para garantir término do áudio
+                        await Future.delayed(const Duration(milliseconds: 80));
+                        if (!mounted) return;
+                        navigator.pop();
+                      },
+                      icon: const Icon(Icons.arrow_back, size: 24),
+                      label: const Text(
+                        'VOLTAR PARA MATÉRIAS',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -2117,421 +2264,453 @@ class JogoPageState extends State<JogoPage> with AutomaticKeepAliveClientMixin, 
         await _stopAllAudio();
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '${widget.materia} - ${widget.ano}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.blue,
-        elevation: 4,
-        actions: [
-          IconButton(
-            tooltip: 'Ler Pergunta',
-            icon: const Icon(Icons.volume_up),
-            onPressed: _speakCurrentQuestion,
+        appBar: AppBar(
+          title: Text(
+            '${widget.materia} - ${widget.ano}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          IconButton(
-            tooltip: _ttsEnabled ? 'Silenciar Leitura' : 'Ativar Leitura',
-            icon: Icon(_ttsEnabled ? Icons.record_voice_over : Icons.voice_over_off),
-            onPressed: () async {
-              setState(() { _ttsEnabled = !_ttsEnabled; });
-              if (!_ttsEnabled) {
-                await _stopTts();
-              }
-            },
-          ),
-          IconButton(
-            tooltip: _speechRate <= 0.5 ? 'Velocidade: Lenta' : 'Velocidade: Normal',
-            icon: Icon(_speechRate <= 0.5 ? Icons.slow_motion_video : Icons.speed),
-            onPressed: () async {
-              setState(() {
-                _speechRate = _speechRate <= 0.5 ? 0.7 : 0.45;
-              });
-              try { await _tts.setSpeechRate(_speechRate); } catch (_) {}
-            },
-          ),
-          // Exibição da pontuação na AppBar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(20),
+          backgroundColor: Colors.blue,
+          elevation: 4,
+          actions: [
+            IconButton(
+              tooltip: 'Ler Pergunta',
+              icon: const Icon(Icons.volume_up),
+              onPressed: _speakCurrentQuestion,
             ),
-            child: Row(
+            IconButton(
+              tooltip: _ttsEnabled ? 'Silenciar Leitura' : 'Ativar Leitura',
+              icon: Icon(
+                _ttsEnabled ? Icons.record_voice_over : Icons.voice_over_off,
+              ),
+              onPressed: () async {
+                setState(() {
+                  _ttsEnabled = !_ttsEnabled;
+                });
+                if (!_ttsEnabled) {
+                  await _stopTts();
+                }
+              },
+            ),
+            IconButton(
+              tooltip: _speechRate <= 0.5
+                  ? 'Velocidade: Lenta'
+                  : 'Velocidade: Normal',
+              icon: Icon(
+                _speechRate <= 0.5 ? Icons.slow_motion_video : Icons.speed,
+              ),
+              onPressed: () async {
+                setState(() {
+                  _speechRate = _speechRate <= 0.5 ? 0.7 : 0.45;
+                });
+                try {
+                  await _tts.setSpeechRate(_speechRate);
+                } catch (_) {}
+              },
+            ),
+            // Exibição da pontuação na AppBar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.white, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$pontuacao',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _bgMusicAllowed ? _toggleMusic : null,
+          backgroundColor: Colors.orange,
+          tooltip: _isMusicPlaying ? 'Desligar música' : 'Ligar música',
+          child: Icon(_isMusicPlaying ? Icons.music_off : Icons.music_note),
+        ),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue.withValues(alpha: 0.3), Colors.white],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.star, color: Colors.white, size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  '$pontuacao',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                // Indicador de progresso
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Pergunta ${perguntaAtual + 1} de ${perguntas.length}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Estrelas conquistadas
+                      Row(
+                        children: List.generate(
+                          estrelas,
+                          (index) => const Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sair do jogo',
-            onPressed: () async {
-              try {
-                await _stopAllAudio();
-              } catch (_) {}
-
-              if (!context.mounted) return;
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginPage(audience: LoginAudience.student),
-                ),
-                (route) => false,
-              );
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _bgMusicAllowed ? _toggleMusic : null,
-        backgroundColor: Colors.orange,
-        tooltip: _isMusicPlaying ? 'Desligar música' : 'Ligar música',
-        child: Icon(_isMusicPlaying ? Icons.music_off : Icons.music_note),
-      ),
-  body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.withValues(alpha: 0.3), Colors.white],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Indicador de progresso
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Text(
-                      'Pergunta ${perguntaAtual + 1} de ${perguntas.length}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    const Spacer(),
-                    // Estrelas conquistadas
-                    Row(
-                      children: List.generate(
-                        estrelas,
-                        (index) => const Icon(Icons.star, color: Colors.amber, size: 24),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Avatar emocional e mensagem curta
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        respondeu
-                            ? (acertou ? '😄' : '😕')
-                            : (acertosConsecutivos >= 2 ? '🤩' : '🙂'),
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      acertosConsecutivos >= 2 ? 'Uau, continue assim!' : 'Vamos lá!',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Barra de progresso segmentada
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: List.generate(perguntas.length, (i) {
-                    final status = _progresso[i];
-                    final Color color = i == perguntaAtual
-                        ? Colors.blue
-                        : (status == null
-                            ? Colors.grey.shade300
-                            : (status ? Colors.green : Colors.red));
-                    return Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(4),
+                // Avatar emocional e mensagem curta
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          respondeu
+                              ? (acertou ? '😄' : '😕')
+                              : (acertosConsecutivos >= 2 ? '🤩' : '🙂'),
+                          style: const TextStyle(fontSize: 20),
                         ),
                       ),
-                    );
-                  }),
+                      const SizedBox(width: 8),
+                      Text(
+                        acertosConsecutivos >= 2
+                            ? 'Uau, continue assim!'
+                            : 'Vamos lá!',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              // Feedback animado curto
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _mostrarFeedback && (_feedbackMsg ?? '').isNotEmpty
-                      ? Container(
-                          key: const ValueKey('feedback'),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                const SizedBox(height: 6),
+                // Barra de progresso segmentada
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: List.generate(perguntas.length, (i) {
+                      final status = _progresso[i];
+                      final Color color = i == perguntaAtual
+                          ? Colors.blue
+                          : (status == null
+                                ? Colors.grey.shade300
+                                : (status ? Colors.green : Colors.red));
+                      return Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          height: 8,
                           decoration: BoxDecoration(
-                            color: _feedbackColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _feedbackColor.withValues(alpha: 0.6)),
+                            color: color,
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
-                            _feedbackMsg!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _feedbackColor,
-                              fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Feedback animado curto
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: _mostrarFeedback && (_feedbackMsg ?? '').isNotEmpty
+                        ? Container(
+                            key: const ValueKey('feedback'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _feedbackColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _feedbackColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            child: Text(
+                              _feedbackMsg!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _feedbackColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+                // Transição entre perguntas (fade + slide)
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, animation) {
+                      final offsetTween = Tween<Offset>(
+                        begin: const Offset(0.12, 0),
+                        end: Offset.zero,
+                      ).chain(CurveTween(curve: Curves.easeOut));
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: animation.drive(offsetTween),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Column(
+                      key: ValueKey(perguntaAtual),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Cartão da pergunta com animação local
+                        TweenAnimationBuilder(
+                          tween: Tween<double>(begin: 0.95, end: 1.0),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.elasticOut,
+                          builder: (context, value, child) {
+                            return Transform.scale(scale: value, child: child);
+                          },
+                          child: Card(
+                            elevation: 8,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            color: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Exibe visualização apropriada baseada no tipo de pergunta
+                                  if (_shouldShowVisualization(
+                                    pergunta['pergunta'],
+                                  ))
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 16,
+                                      ),
+                                      child: _buildQuestionVisualization(
+                                        pergunta['pergunta'],
+                                      ),
+                                    ),
+                                  Text(
+                                    pergunta['pergunta'],
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ),
-              // Transição entre perguntas (fade + slide)
-              Expanded(
-                child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, animation) {
-                  final offsetTween = Tween<Offset>(begin: const Offset(0.12, 0), end: Offset.zero)
-                      .chain(CurveTween(curve: Curves.easeOut));
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: animation.drive(offsetTween),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Column(
-                  key: ValueKey(perguntaAtual),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Cartão da pergunta com animação local
-                    TweenAnimationBuilder(
-                      tween: Tween<double>(begin: 0.95, end: 1.0),
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.elasticOut,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
-                      },
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
                         ),
-                        color: Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                        const SizedBox(height: 20),
+                        if ((pergunta['dica'] ?? '').toString().isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20.0,
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final dica = (pergunta['dica'] ?? '')
+                                    .toString();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Dica: $dica'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.lightbulb),
+                              label: const Text('Dica'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber,
+                                foregroundColor: Colors.black,
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: (pergunta['opcoes'] as List).length,
+                            itemBuilder: (context, index) {
+                              final opcao = pergunta['opcoes'][index];
+                              Color buttonColor = Colors.blueAccent;
+                              if (respondeu) {
+                                buttonColor = opcao == pergunta['resposta']
+                                    ? Colors.green
+                                    : Colors.red;
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 12.0,
+                                ),
+                                child: TweenAnimationBuilder(
+                                  tween: Tween<double>(begin: 0.95, end: 1.0),
+                                  duration: Duration(
+                                    milliseconds: 300 + (index * 100),
+                                  ),
+                                  curve: Curves.easeOutBack,
+                                  builder: (context, value, child) {
+                                    return Transform.scale(
+                                      scale: value,
+                                      child: child,
+                                    );
+                                  },
+                                  child: Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(15),
+                                      onTap: respondeu
+                                          ? null
+                                          : () => _verificarResposta(opcao),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(16.0),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              buttonColor.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                              buttonColor.withValues(
+                                                alpha: 0.5,
+                                              ),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            15,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  String.fromCharCode(
+                                                    65 + index,
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: buttonColor,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 18,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Text(
+                                                opcao,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Área para exibição da animação de estrelas
+                AnimatedBuilder(
+                  animation: _starAnimation,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _starController.value,
+                      child: Transform.scale(
+                        scale: _starAnimation.value,
+                        child: Container(
+                          height: 60,
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // Exibe visualização apropriada baseada no tipo de pergunta
-                              if (_shouldShowVisualization(pergunta['pergunta']))
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  child: _buildQuestionVisualization(pergunta['pergunta']),
-                                ),
+                              Icon(Icons.star, color: Colors.amber, size: 40),
+                              const SizedBox(width: 8),
                               Text(
-                                pergunta['pergunta'],
-                                style: const TextStyle(
-                                  fontSize: 26,
+                                "Estrela conquistada!",
+                                style: TextStyle(
+                                  color: Colors.amber,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                                  fontSize: 20,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    if ((pergunta['dica'] ?? '').toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            final dica = (pergunta['dica'] ?? '').toString();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Dica: $dica'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.lightbulb),
-                          label: const Text('Dica'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            foregroundColor: Colors.black,
-                          ),
-                        ),
-                      ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: (pergunta['opcoes'] as List).length,
-                        itemBuilder: (context, index) {
-                          final opcao = pergunta['opcoes'][index];
-                          Color buttonColor = Colors.blueAccent;
-                          if (respondeu) {
-                            buttonColor = opcao == pergunta['resposta']
-                                ? Colors.green
-                                : Colors.red;
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                            child: TweenAnimationBuilder(
-                              tween: Tween<double>(begin: 0.95, end: 1.0),
-                              duration: Duration(milliseconds: 300 + (index * 100)),
-                              curve: Curves.easeOutBack,
-                              builder: (context, value, child) {
-                                return Transform.scale(
-                                  scale: value,
-                                  child: child,
-                                );
-                              },
-                              child: Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(15),
-                                  onTap: respondeu ? null : () => _verificarResposta(opcao),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16.0),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          buttonColor.withValues(alpha: 0.7),
-                                          buttonColor.withValues(alpha: 0.5),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              String.fromCharCode(65 + index),
-                                              style: TextStyle(
-                                                color: buttonColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Text(
-                                            opcao,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-            ),
-
-            // Área para exibição da animação de estrelas
-            AnimatedBuilder(
-              animation: _starAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _starController.value,
-                  child: Transform.scale(
-                    scale: _starAnimation.value,
-                    child: Container(
-                      height: 60,
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 40),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Estrela conquistada!",
-                            style: TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ],
-                      ),
+                if (respondeu)
+                  ElevatedButton(
+                    onPressed: _proximaPergunta,
+                    child: Text(
+                      perguntaAtual < perguntas.length - 1
+                          ? 'Próxima'
+                          : 'Finalizar',
                     ),
                   ),
-                );
-              },
+                const SizedBox(height: 10),
+              ],
             ),
-            if (respondeu)
-              ElevatedButton(
-                onPressed: _proximaPergunta,
-                child: Text(
-                  perguntaAtual < perguntas.length - 1
-                      ? 'Próxima'
-                      : 'Finalizar',
-                ),
-              ),
-            const SizedBox(height: 10),
-          ],
-          )
+          ),
         ),
-      )
       ),
     );
-    }
-    }
+  }
+}

@@ -48,7 +48,8 @@ class MateriasPage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => PerfilAlunoPage(username: user?.username ?? 'aluno'),
+                builder: (_) =>
+                    PerfilAlunoPage(username: user?.username ?? 'aluno'),
               ),
             );
           }),
@@ -58,20 +59,22 @@ class MateriasPage extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const RankingDatabasePage()),
             );
           }),
-            _buildRoundedAction(Icons.logout, 'Sair', () async {
-              // Melhoria: O erro ao parar o áudio não é mais silenciosamente ignorado.
-              // Adicionado log para diagnóstico, conforme recomendado no relatório de falhas.
-              try {
-                await BackgroundAudioService.instance.stopForTopic();
-              } catch (e, s) {
-                debugPrint('Falha ao parar o áudio no logout: $e\n$s');
-              }
-              if (!context.mounted) return;
-              await SessionService.logout();
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AccessChoicePage()), (route) => false);
-            }),
+          _buildRoundedAction(Icons.logout, 'Sair', () async {
+            // Melhoria: O erro ao parar o áudio não é mais silenciosamente ignorado.
+            // Adicionado log para diagnóstico, conforme recomendado no relatório de falhas.
+            try {
+              await BackgroundAudioService.instance.stopForTopic();
+            } catch (e, s) {
+              debugPrint('Falha ao parar o áudio no logout: $e\n$s');
+            }
+            if (!context.mounted) return;
+            await SessionService.logout();
+            if (!context.mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AccessChoicePage()),
+              (route) => false,
+            );
+          }),
           const SizedBox(width: 8),
         ],
       ),
@@ -81,10 +84,7 @@ class MateriasPage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade50,
-              Colors.purple.shade50,
-            ],
+            colors: [Colors.blue.shade50, Colors.purple.shade50],
           ),
         ),
         child: SafeArea(
@@ -114,7 +114,7 @@ class MateriasPage extends StatelessWidget {
                     color: Colors.blueGrey.shade700,
                   ),
                 ),
-                
+
                 // Caminho Visual Animado
                 _buildPathAnimation(),
 
@@ -171,7 +171,11 @@ class MateriasPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRoundedAction(IconData icon, String tooltip, VoidCallback onPressed) {
+  Widget _buildRoundedAction(
+    IconData icon,
+    String tooltip,
+    VoidCallback onPressed,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
@@ -203,10 +207,7 @@ class MateriasPage extends StatelessWidget {
           const SizedBox(width: 16),
           _buildDot(2),
           const SizedBox(width: 16),
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: _buildDot(3),
-          ),
+          Padding(padding: const EdgeInsets.only(top: 16), child: _buildDot(3)),
           const SizedBox(width: 16),
           _buildDot(4),
         ],
@@ -264,10 +265,7 @@ class MateriasPage extends StatelessWidget {
               ),
             ),
           ),
-          CustomPaint(
-            size: const Size(20, 10),
-            painter: BubbleTailPainter(),
-          ),
+          CustomPaint(size: const Size(20, 10), painter: BubbleTailPainter()),
           const SizedBox(height: 12),
           Flexible(
             child: Image.asset(
@@ -299,7 +297,8 @@ class SubjectCard extends StatefulWidget {
   State<SubjectCard> createState() => _SubjectCardState();
 }
 
-class _SubjectCardState extends State<SubjectCard> with SingleTickerProviderStateMixin {
+class _SubjectCardState extends State<SubjectCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -310,9 +309,10 @@ class _SubjectCardState extends State<SubjectCard> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.92,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -328,10 +328,7 @@ class _SubjectCardState extends State<SubjectCard> with SingleTickerProviderStat
       tween: Tween<double>(begin: 0, end: 1),
       curve: Curves.easeOutBack,
       builder: (context, double value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
+        return Transform.scale(scale: value, child: child);
       },
       child: GestureDetector(
         onTapDown: (_) => _controller.forward(),
@@ -356,7 +353,9 @@ class _SubjectCardState extends State<SubjectCard> with SingleTickerProviderStat
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: (widget.materia['cor'] as Color).withValues(alpha: 0.4),
+                  color: (widget.materia['cor'] as Color).withValues(
+                    alpha: 0.4,
+                  ),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -418,7 +417,7 @@ class BubbleTailPainter extends CustomPainter {
     path.lineTo(size.width / 2, size.height);
     path.lineTo(size.width, 0);
     path.close();
-    
+
     canvas.drawPath(path, paint);
   }
 

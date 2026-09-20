@@ -1006,6 +1006,23 @@ class AppDatabase {
     return user.copy(id: id, password: hashedPassword, createdAt: createdAt);
   }
 
+  Future<void> ensureDevelopmentAdmin({
+    required String username,
+    required String password,
+  }) async {
+    final existing = await getUserByUsername(username);
+    if (existing != null) return;
+
+    await createUser(
+      User(
+        username: username,
+        password: password,
+        fullName: 'Administrador de desenvolvimento',
+        role: 'admin',
+      ),
+    );
+  }
+
   Future<TeacherAssignment> createTeacherAssignment(
     TeacherAssignment assignment,
   ) async {
@@ -1089,7 +1106,9 @@ class AppDatabase {
     );
 
     if (!_dbAvailable) {
-      final exists = _inMemoryTeacherInvites.any((item) => item.code == invite.code);
+      final exists = _inMemoryTeacherInvites.any(
+        (item) => item.code == invite.code,
+      );
       if (exists) {
         throw ArgumentError('Código de convite já existente.');
       }
@@ -1107,7 +1126,10 @@ class AppDatabase {
 
     final db = await database;
     try {
-      final id = await db.insert('teacher_invites', invite.toMap()..remove('id'));
+      final id = await db.insert(
+        'teacher_invites',
+        invite.toMap()..remove('id'),
+      );
       return invite.copyWith(id: id);
     } catch (_) {
       throw ArgumentError('Código de convite já existente.');
@@ -1123,10 +1145,7 @@ class AppDatabase {
 
     final db = await database;
     final rows = schoolId == null || schoolId.trim().isEmpty
-        ? await db.query(
-            'teacher_invites',
-            orderBy: 'createdAt DESC',
-          )
+        ? await db.query('teacher_invites', orderBy: 'createdAt DESC')
         : await db.query(
             'teacher_invites',
             where: 'schoolId = ?',
@@ -1187,8 +1206,11 @@ class AppDatabase {
     }
 
     final expectedSchoolId = invite.schoolId;
-    final schoolMismatch = assignments.any((assignment) => assignment.schoolId != expectedSchoolId);
-    if (schoolMismatch || (teacher.schoolId != null && teacher.schoolId != expectedSchoolId)) {
+    final schoolMismatch = assignments.any(
+      (assignment) => assignment.schoolId != expectedSchoolId,
+    );
+    if (schoolMismatch ||
+        (teacher.schoolId != null && teacher.schoolId != expectedSchoolId)) {
       throw ArgumentError('O convite não corresponde à escola informada.');
     }
 
@@ -1198,10 +1220,7 @@ class AppDatabase {
     }
 
     final createdTeacher = await createUser(
-      teacher.copy(
-        role: 'teacher',
-        schoolId: expectedSchoolId,
-      ),
+      teacher.copy(role: 'teacher', schoolId: expectedSchoolId),
     );
 
     final createdAssignments = <TeacherAssignment>[];
@@ -1234,7 +1253,9 @@ class AppDatabase {
 
   Future<void> _saveTeacherInvite(TeacherInvite invite) async {
     if (!_dbAvailable) {
-      final index = _inMemoryTeacherInvites.indexWhere((item) => item.id == invite.id || item.code == invite.code);
+      final index = _inMemoryTeacherInvites.indexWhere(
+        (item) => item.id == invite.id || item.code == invite.code,
+      );
       if (index >= 0) {
         _inMemoryTeacherInvites[index] = invite;
       }
@@ -1434,6 +1455,11 @@ class AppDatabase {
       await transaction.delete(
         'teacher_assignments',
         where: 'teacherId = ?',
+        whereArgs: [id],
+      );
+      await transaction.delete(
+        'teacher_invites',
+        where: 'usedByUserId = ?',
         whereArgs: [id],
       );
       await transaction.delete(

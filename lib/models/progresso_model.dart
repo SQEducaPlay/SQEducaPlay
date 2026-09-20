@@ -35,11 +35,11 @@ class ProgressoAluno {
     this.ultraRapidosTotal = 0,
     this.consecutivePerfects = 0,
     this.perfectsToday = 0,
-  })  : quizesPorMateria = quizesPorMateria ?? {},
-        acertosPorMateria = acertosPorMateria ?? {},
-        errosPorMateria = errosPorMateria ?? {},
-        pontosPorMateria = pontosPorMateria ?? {},
-        conquistasDesbloqueadas = conquistasDesbloqueadas ?? [];
+  }) : quizesPorMateria = quizesPorMateria ?? {},
+       acertosPorMateria = acertosPorMateria ?? {},
+       errosPorMateria = errosPorMateria ?? {},
+       pontosPorMateria = pontosPorMateria ?? {},
+       conquistasDesbloqueadas = conquistasDesbloqueadas ?? [];
 
   void registrarQuizCompleto({
     required String materia,
@@ -115,9 +115,14 @@ class ProgressoAluno {
   }
 
   double get taxaAcertoGeral {
-    int totalAcertos =
-        acertosPorMateria.values.fold(0, (sum, value) => sum + value);
-    int totalErros = errosPorMateria.values.fold(0, (sum, value) => sum + value);
+    int totalAcertos = acertosPorMateria.values.fold(
+      0,
+      (sum, value) => sum + value,
+    );
+    int totalErros = errosPorMateria.values.fold(
+      0,
+      (sum, value) => sum + value,
+    );
     int total = totalAcertos + totalErros;
     return total > 0 ? (totalAcertos / total) * 100 : 0;
   }
@@ -134,12 +139,13 @@ class ProgressoAluno {
 
     final levels = [
       {'nome': 'Novato', 'limite': 0},
-      {'nome': 'Iniciante', 'limite': 150},
-      {'nome': 'Aprendiz', 'limite': 350},
-      {'nome': 'Intermediário', 'limite': 650},
-      {'nome': 'Estudioso', 'limite': 1200},
-      {'nome': 'Expert', 'limite': 2300},
-      {'nome': 'Mestre', 'limite': 3600},
+      {'nome': 'Iniciante', 'limite': 1050},
+      {'nome': 'Aprendiz', 'limite': 1850},
+      {'nome': 'Intermediário', 'limite': 2550},
+      {'nome': 'Estudioso', 'limite': 3200},
+      {'nome': 'Expert', 'limite': 4300},
+      {'nome': 'Mestre', 'limite': 10000},
+      {'nome': 'Gênio', 'limite': 15000},
     ];
 
     for (int i = levels.length - 1; i >= 0; i--) {
@@ -154,7 +160,7 @@ class ProgressoAluno {
   }
 
   int get proximoNivelPontos {
-    final thresholds = [150, 350, 650, 1200, 2300, 3600];
+    final thresholds = [1050, 1850, 2550, 3200, 4300, 10000, 15000];
     for (var t in thresholds) {
       if (pontuacaoTotal < t) return t;
     }
@@ -162,15 +168,7 @@ class ProgressoAluno {
   }
 
   double get progressoNivel {
-    final levels = [
-      0,
-      150,
-      350,
-      650,
-      1200,
-      2300,
-      3600,
-    ];
+    final levels = [0, 1050, 1850, 2550, 3200, 4300, 10000, 15000];
     int lower = 0;
     int upper = levels.last;
     for (var i = 0; i < levels.length; i++) {

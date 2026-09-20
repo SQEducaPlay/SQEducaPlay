@@ -41,4 +41,4 @@ Use os templates de Issue disponíveis no repositório (`Bug report` ou `Feature
 
 ## 📖 Documentação do projeto
 
-Antes de codar, consulte [INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md) para entender requisitos, arquitetura e convenções já definidas.
+Antes de codar, consulte [INDICE_DOCUMENTACAO.md](https://github.com/SQEducaPlay/SQEducaPlay/blob/main/DOCUMENTACAO_TECNICA.md) para entender requisitos, arquitetura e convenções já definidas.

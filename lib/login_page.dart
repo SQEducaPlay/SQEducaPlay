@@ -30,11 +30,10 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _userService = UserService();
   bool _obscurePassword = true;
-  bool _savePassword = true;
+  bool _saveUsername = true;
 
   String get _credentialSuffix => widget.audience.name;
   String get _savedUsernameKey => 'saved_username_$_credentialSuffix';
-  String get _savedPasswordKey => 'saved_password_$_credentialSuffix';
 
   @override
   void initState() {
@@ -47,27 +46,21 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     final savedUsername = prefs.getString(_savedUsernameKey);
-    final savedPassword = prefs.getString(_savedPasswordKey);
 
     if (savedUsername != null && savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
     }
-    if (savedPassword != null && savedPassword.isNotEmpty) {
-      _passwordController.text = savedPassword;
-      _savePassword = true;
-    }
+    await prefs.remove('saved_password_${widget.audience.name}');
     setState(() {});
   }
 
   Future<void> _persistirCredenciais() async {
     final prefs = await SharedPreferences.getInstance();
 
-    if (_savePassword) {
+    if (_saveUsername) {
       await prefs.setString(_savedUsernameKey, _usernameController.text.trim());
-      await prefs.setString(_savedPasswordKey, _passwordController.text);
     } else {
       await prefs.remove(_savedUsernameKey);
-      await prefs.remove(_savedPasswordKey);
     }
   }
 
@@ -319,14 +312,14 @@ class _LoginPageState extends State<LoginPage> {
                                     child: Row(
                                       children: [
                                         Checkbox(
-                                          value: _savePassword,
-                                          onChanged: (value) => setState(() => _savePassword = value ?? false),
+                                          value: _saveUsername,
+                                          onChanged: (value) => setState(() => _saveUsername = value ?? false),
                                           activeColor: Colors.blue,
                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
                                         const Text(
-                                          'Salvar Senha',
+                                          'Salvar usuário',
                                           style: TextStyle(color: Colors.blue, fontSize: 16),
                                         ),
                                       ],

@@ -51,4 +51,19 @@ void main() {
 
     expect(find.textContaining('ainda nao esta configurado'), findsOneWidget);
   });
+
+  testWidgets('confirma antes de sair do acesso do responsavel', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: GuardianAccessPage()));
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Deseja realmente sair do aplicativo?'), findsOneWidget);
+    await tester.tap(find.text('Continuar no app'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acesso do responsavel'), findsOneWidget);
+  });
 }

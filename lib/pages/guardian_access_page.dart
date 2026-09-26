@@ -430,56 +430,86 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   }
 
   Future<void> _signOut() async {
-    await BackendService.instance.client.auth.signOut();
-    ProgressoService().setRemoteStudentScope(null);
-    if (!mounted) return;
-    setState(() {
-      _guardianRole = null;
-      _guardianFullName = null;
-      _children = [];
-      _error = null;
-      _createAccount = false;
-    });
+    final shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da conta?'),
+        content: const Text(
+          'Deseja realmente sair da conta do responsavel neste aparelho?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Continuar conectado'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sair da conta'),
+          ),
+        ],
+      ),
+    );
+    if (shouldSignOut != true) return;
+
+    try {
+      await BackendService.instance.client.auth.signOut();
+      ProgressoService().setRemoteStudentScope(null);
+      if (!mounted) return;
+      setState(() {
+        _guardianRole = null;
+        _guardianFullName = null;
+        _children = [];
+        _error = null;
+        _createAccount = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Nao foi possivel sair da conta. Tente novamente.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Acesso do responsavel')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const Icon(Icons.family_restroom, size: 52, color: Colors.blue),
-              const SizedBox(height: 12),
-              Text(
-                _guardianRole != null
-                    ? 'Ola${_guardianFullName == null || _guardianFullName!.isEmpty ? '' : ', $_guardianFullName'}!'
-                    : _createAccount
-                    ? 'Criar conta da familia'
-                    : 'Entrar na conta da familia',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              if (_guardianRole == null) ..._buildAuthForm(),
-              if (_guardianRole == 'guardian' || _guardianRole == 'admin')
-                ..._buildFamilyProfiles(),
-              if (_error != null) ...[
+    return ConfirmExitScope(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Acesso do responsavel')),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const Icon(Icons.family_restroom, size: 52, color: Colors.blue),
                 const SizedBox(height: 12),
                 Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
+                  _guardianRole != null
+                      ? 'Ola${_guardianFullName == null || _guardianFullName!.isEmpty ? '' : ', $_guardianFullName'}!'
+                      : _createAccount
+                      ? 'Criar conta da familia'
+                      : 'Entrar na conta da familia',
                   textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
+                const SizedBox(height: 8),
+                if (_guardianRole == null) ..._buildAuthForm(),
+                if (_guardianRole == 'guardian' || _guardianRole == 'admin')
+                  ..._buildFamilyProfiles(),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                if (_busy) ...[
+                  const SizedBox(height: 18),
+                  const Center(child: CircularProgressIndicator()),
+                ],
               ],
-              if (_busy) ...[
-                const SizedBox(height: 18),
-                const Center(child: CircularProgressIndicator()),
-              ],
-            ],
+            ),
           ),
         ),
       ),

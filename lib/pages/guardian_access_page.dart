@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
@@ -40,6 +41,8 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   String? _guardianFullName;
   String? _selectedGrade;
   List<Map<String, dynamic>> _children = [];
+  List<Map<String, dynamic>> _schools = [];
+  String? _selectedSchoolId;
 
   static const _grades = [
     '2º Ano Fundamental',
@@ -103,6 +106,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
           email: email,
           password: password,
           data: {'full_name': _guardianNameController.text.trim()},
+          emailRedirectTo: kIsWeb ? Uri.base.toString() : null,
         );
         if (response.session == null) {
           setState(() {
@@ -172,11 +176,13 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       }
 
       final children = await RemoteSyncService.listChildren();
+      final schools = await RemoteSyncService.listActiveSchools();
       if (!mounted) return;
       setState(() {
         _guardianRole = role;
         _guardianFullName = profile['full_name'] as String? ?? '';
         _children = children;
+        _schools = schools;
         _busy = false;
         _createAccount = false;
       });
@@ -248,6 +254,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
             : _childNicknameController.text.trim(),
         grade: _selectedGrade!,
         consentVersion: PrivacyPolicyConfig.version,
+        schoolId: _selectedSchoolId,
       );
       _childNameController.clear();
       _childUsernameController.clear();
@@ -627,15 +634,41 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
           ? null
           : (grade) => setState(() => _selectedGrade = grade),
     ),
+    DropdownButtonFormField<String>(
+      initialValue: _selectedSchoolId ?? '',
+      decoration: const InputDecoration(
+        labelText: 'Escola (opcional)',
+        helperText: 'Se escolher uma escola, ela precisa aprovar a matricula.',
+      ),
+      items: [
+        const DropdownMenuItem(
+          value: '',
+          child: Text('Somente conta familiar'),
+        ),
+        ..._schools.map(
+          (school) => DropdownMenuItem(
+            value: school['id'] as String,
+            child: Text(school['name'] as String),
+          ),
+        ),
+      ],
+      onChanged: _busy
+          ? null
+          : (schoolId) => setState(
+              () => _selectedSchoolId = schoolId == '' ? null : schoolId,
+            ),
+    ),
     CheckboxListTile(
       contentPadding: EdgeInsets.zero,
       value: _consentAccepted,
       onChanged: _busy
           ? null
           : (value) => setState(() => _consentAccepted = value ?? false),
-      title: const Text(
-        'Sou responsavel e autorizo a criacao deste perfil para o teste.',
-        style: TextStyle(fontSize: 13),
+      title: Text(
+        _selectedSchoolId == null
+            ? 'Sou responsavel e autorizo a criacao deste perfil.'
+            : 'Sou responsavel e autorizo criar o perfil e solicitar a matricula, compartilhando os dados necessarios com a escola selecionada.',
+        style: const TextStyle(fontSize: 13),
       ),
     ),
     ElevatedButton(

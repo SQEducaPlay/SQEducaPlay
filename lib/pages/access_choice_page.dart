@@ -6,6 +6,7 @@ import '../register_page.dart';
 import '../services/backend_service.dart';
 import 'teacher_setup_page.dart';
 import 'guardian_access_page.dart';
+import 'institutional_access_page.dart';
 
 class AccessChoicePage extends StatefulWidget {
   final bool skipRememberedAudience;
@@ -185,13 +186,6 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'O acesso online de educadores ainda nao foi liberado. '
-                          'As opcoes abaixo continuam locais e nao sincronizam.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF274C77)),
-                        ),
                         const SizedBox(height: 12),
                       ],
                       SlideTransition(
@@ -239,10 +233,10 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           opacity: _teacherOpacity,
                           child: _AccessCard(
                             title: onlineBackendConfigured
-                                ? 'Educador (modo local)'
+                                ? 'Educador (online)'
                                 : 'Sou Educador',
                             subtitle: onlineBackendConfigured
-                                ? 'O acesso online sera liberado em uma proxima etapa'
+                                ? 'Acesso institucional com convite individual da escola'
                                 : 'Acesse o painel da sua turma',
                             color: const Color(0xFFB46A00),
                             icon: Icons.workspace_premium,
@@ -250,17 +244,25 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const LoginPage(
-                                    audience: LoginAudience.teacher,
-                                  ),
+                                  builder: (_) => onlineBackendConfigured
+                                      ? const InstitutionalAccessPage()
+                                      : const LoginPage(
+                                          audience: LoginAudience.teacher,
+                                        ),
                                 ),
                               );
                             },
-                            secondaryLabel: 'Primeiro acesso',
+                            secondaryLabel: onlineBackendConfigured
+                                ? 'Primeiro acesso (tenho convite)'
+                                : 'Primeiro acesso',
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const TeacherSetupPage(),
+                                  builder: (_) => onlineBackendConfigured
+                                      ? const InstitutionalAccessPage(
+                                          startWithSignUp: true,
+                                        )
+                                      : const TeacherSetupPage(),
                                 ),
                               );
                             },

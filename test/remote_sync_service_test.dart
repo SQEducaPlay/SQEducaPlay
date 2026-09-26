@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:sqeducaplay/pages/guardian_access_page.dart';
+import 'package:sqeducaplay/pages/institutional_access_page.dart';
 import 'package:sqeducaplay/services/remote_sync_service.dart';
 import 'package:sqeducaplay/services/progresso_service.dart';
 
@@ -50,6 +51,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('ainda nao esta configurado'), findsOneWidget);
+  });
+
+  testWidgets('exige convite e autentica educadores pela tela institucional', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: InstitutionalAccessPage()));
+
+    expect(find.text('Acesso de educador'), findsOneWidget);
+    expect(find.text('Convite individual da escola'), findsOneWidget);
+    await tester.tap(find.text('Primeiro acesso? Criar conta com convite'));
+    await tester.pumpAndSettle();
+    expect(find.text('Criar conta e validar convite'), findsOneWidget);
   });
 
   testWidgets('confirma antes de sair do acesso do responsavel', (

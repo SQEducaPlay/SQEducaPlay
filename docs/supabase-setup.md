@@ -1,9 +1,9 @@
 # Configuracao segura do Supabase
 
-O projeto SQEducaPlay tem dependencias e inicializacao opcionais do Supabase,
-mas a aplicacao ainda usa os fluxos locais de cadastro e login. Esta migracao
-cria a base remota com isolamento por Row Level Security (RLS); ela nao migra
-contas/dados locais nem ativa a autenticacao remota no app.
+O SQEducaPlay usa o Supabase para contas familiares, perfis de aluno, convites
+institucionais, turmas e sincronizacao de quizzes. O SQLite continua como fila
+local/offline. Historicos locais antigos so sao enviados quando o responsavel
+seleciona a conta local, confirma a senha e autoriza a importacao.
 
 ## Aplicar as migracoes
 
@@ -12,16 +12,20 @@ contas/dados locais nem ativa a autenticacao remota no app.
    `supabase/migrations/20260926160000_initial_secure_schema.sql`.
 3. Depois execute a migracao incremental:
    `supabase/migrations/20260926170000_guardian_online_flows.sql`.
-4. Para cada arquivo, copie todo o conteudo para uma consulta nova no SQL
+4. Por fim, execute a migracao incremental:
+   `supabase/migrations/20260926180000_online_school_access.sql`.
+5. Para cada arquivo, copie todo o conteudo para uma consulta nova no SQL
    Editor e execute. Nao execute novamente uma migracao que ja terminou sem
    erros: `CREATE TABLE` inicial nao e idempotente.
-5. Se a migracao inicial ja foi executada com sucesso, execute apenas a
-   migracao incremental.
+6. Se as migracoes `20260926160000` e `20260926170000` ja foram executadas,
+   execute somente a nova `20260926180000_online_school_access.sql`.
 
 O esquema cria contas autenticadas como responsaveis por padrao. Um responsavel
-pode ter varios perfis de aluno ligados a mesma conta. Educadores so podem
-consultar alunos de turmas nas quais tenham uma associacao ativa; administradores
-de projeto podem gerenciar o cadastro institucional.
+pode ter varios perfis e pode solicitar matricula em uma escola ativa; o perfil
+fica pendente ate a escola aprovar e escolher uma turma. Educadores precisam de
+convite individual, vinculado ao e-mail, e so acessam alunos matriculados nas
+escolas autorizadas. Administradores podem cadastrar escolas e administradores
+escolares; estes podem gerenciar turmas e convidar educadores da propria escola.
 
 ## Criar o primeiro administrador
 
@@ -64,14 +68,31 @@ promocao inicial deve ser feita apenas no SQL Editor da organizacao/projeto.
   `SUPABASE_SERVICE_ROLE_KEY` fica somente no ambiente gerenciado da Edge
   Function e nunca no app ou em variaveis do GitHub Actions.
 
-## Limites atuais e proxima etapa
+## Primeiro acesso institucional
 
-As telas online usam autenticacao por e-mail do responsavel, criacao de varios
-perfis, sincronizacao de quizzes com fila local de reenvio e importacao do
-historico remoto. O acesso online de educadores e o provisionamento institucional
-ainda precisam ser concluidos. Contas antigas locais nao sao enviadas
-automaticamente; devem ser vinculadas e importadas com revisao do responsavel.
-Use somente dados ficticios ate concluir a validacao e a revisao institucional.
+1. Entre no app com a conta que recebeu papel `admin`.
+2. Abra **Educador (online)** e cadastre a escola.
+3. Opcionalmente, cadastre uma conta de administrador escolar e autorize-a para
+   essa escola.
+4. Cadastre as turmas e gere um convite para cada educador usando o e-mail que
+   ele usara no app. O codigo aparece uma unica vez; encaminhe-o em canal
+   apropriado. Ele expira em 14 dias e so pode ser usado uma vez.
+5. O educador cria a conta com esse e-mail e o codigo. O acesso fica limitado a
+   escola do convite.
+6. O responsavel pode escolher a escola ao criar um perfil. A escola ve o
+   pedido pendente e precisa matricular o perfil em uma turma antes do acesso
+   institucional.
+
+Use perfis ficticios para validar o fluxo. A aprovacao na interface nao
+substitui a revisao institucional do aviso de privacidade, base legal,
+retencao e procedimentos para dados de criancas.
+
+## Dados locais e limites de seguranca
+
+Contas locais antigas nao sao convertidas automaticamente. Para um perfil
+online, a importacao do historico e opcional e exige confirmacao explicita do
+responsavel no aparelho de origem. SQLite permanece para uso offline e fila de
+reenvio; os quizzes associados a um perfil online sincronizam apos conexao.
 
 RLS protege o acesso aos registros; nao e criptografia ponta a ponta. O
 Supabase usa HTTPS e criptografia de infraestrutura, mas pontuacoes enviadas

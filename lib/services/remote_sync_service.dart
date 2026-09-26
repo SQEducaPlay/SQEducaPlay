@@ -35,12 +35,22 @@ abstract final class RemoteSyncService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  static Future<List<Map<String, dynamic>>> listActiveSchools() async {
+    final rows = await _client
+        .from('schools')
+        .select('id, name')
+        .eq('active', true)
+        .order('name');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   static Future<String> createStudent({
     required String username,
     required String fullName,
     String? nickname,
     required String grade,
     required String consentVersion,
+    String? schoolId,
   }) async {
     final result = await _client.rpc(
       'create_student_profile',
@@ -49,7 +59,7 @@ abstract final class RemoteSyncService {
         'p_full_name': fullName,
         'p_nickname': nickname,
         'p_grade': grade,
-        'p_school_id': null,
+        'p_school_id': schoolId,
         'p_consent_version': consentVersion,
       },
     );
@@ -164,7 +174,7 @@ abstract final class RemoteSyncService {
 
   static Future<void> _downloadQuizHistory(String remoteStudentId) async {
     const pageSize = 1000;
-    for (var offset = 0;; offset += pageSize) {
+    for (var offset = 0; ; offset += pageSize) {
       final sessions = await _client
           .from('quiz_sessions')
           .select(

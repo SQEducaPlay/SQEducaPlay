@@ -7,6 +7,7 @@ import '../database/app_database.dart';
 import '../home_page.dart';
 import '../materias_page.dart';
 import '../models/user_model.dart';
+import 'access_choice_page.dart';
 import '../services/backend_service.dart';
 import '../services/password_service.dart';
 import '../services/progresso_service.dart';
@@ -455,13 +456,10 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       await BackendService.instance.client.auth.signOut();
       ProgressoService().setRemoteStudentScope(null);
       if (!mounted) return;
-      setState(() {
-        _guardianRole = null;
-        _guardianFullName = null;
-        _children = [];
-        _error = null;
-        _createAccount = false;
-      });
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AccessChoicePage()),
+        (_) => false,
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() {

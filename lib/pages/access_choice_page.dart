@@ -163,8 +163,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                       if (BackendService.instance.isConfigured) ...[
                         _AccessCard(
                           title: 'Sou Responsavel',
-                          subtitle:
-                              'Acesse os perfis da sua familia em qualquer aparelho',
+                          subtitle: 'Acesse os perfis da sua familia',
                           color: const Color(0xFF27805A),
                           icon: Icons.family_restroom,
                           primaryLabel: 'Entrar na conta',
@@ -195,12 +194,12 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           child: _AccessCard(
                             title: 'Sou Aluno',
                             subtitle: onlineBackendConfigured
-                                ? 'Acesse seu perfil pela conta do responsavel em qualquer aparelho'
+                                ? 'Acesse seu perfil pela conta do responsavel'
                                 : 'Entrar para estudar ou criar conta de aluno',
                             color: const Color(0xFF2B7CD3),
                             icon: Icons.school,
                             primaryLabel: onlineBackendConfigured
-                                ? 'Acessar perfil online'
+                                ? 'Acessar perfil'
                                 : 'Entrar como aluno',
                             onPrimary: () {
                               Navigator.of(context).push(
@@ -256,9 +255,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                                 ),
                               );
                             },
-                            secondaryLabel: onlineBackendConfigured
-                                ? 'Primeiro acesso (tenho convite)'
-                                : 'Primeiro acesso',
+                            secondaryLabel: 'Primeiro acesso',
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(

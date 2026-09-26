@@ -27,7 +27,7 @@ test: adiciona teste para daily_mission_service
 
 1. Rode `flutter analyze` e corrija os problemas apontados.
 2. Rode `flutter test` e garanta que os testes existentes continuam passando.
-3. Atualize a documentação relevante em [docs/README.md](https://github.com/SQEducaPlay/SQEducaPlay/blob/main/README.md) se a mudança afetar arquitetura, banco de dados ou requisitos.
+3. Atualize a [documentação técnica](DOCUMENTACAO_TECNICA.md) se a mudança afetar arquitetura, banco de dados ou requisitos; consulte o [índice da documentação](docs/README.md).
 4. Descreva no PR o que foi alterado e por quê.
 
 ## 🔍 Revisão de código
@@ -41,4 +41,4 @@ Use os templates de Issue disponíveis no repositório (`Bug report` ou `Feature
 
 ## 📖 Documentação do projeto
 
-Antes de codar, consulte [INDICE_DOCUMENTACAO.md](https://github.com/SQEducaPlay/SQEducaPlay/blob/main/DOCUMENTACAO_TECNICA.md) para entender requisitos, arquitetura e convenções já definidas.
+Antes de codar, consulte o [índice da documentação](docs/README.md) e a [documentação técnica](DOCUMENTACAO_TECNICA.md) para entender a arquitetura e as convenções já definidas.

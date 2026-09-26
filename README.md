@@ -6,6 +6,7 @@
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Web](https://img.shields.io/badge/web-online-brightgreen)
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-orange)
 
 </div>
@@ -16,9 +17,9 @@ Aplicativo educacional gamificado desenvolvido para apoiar o aprendizado de estu
 
 ### Integrantes do grupo
 
-- Vanessa Barbosa
-- Keinan de Souza Cruz
-- Maycon Douglas A. Paixão
+- Vanessa Barbosa — [@vanessabarbosaaa-rgb](https://github.com/vanessabarbosaaa-rgb)
+- Keinan de Souza Cruz — [@KeinanSZ](https://github.com/KeinanSZ)
+- Maycon Douglas A. Paixão — [@douglasmaycon120-lgtm](https://github.com/douglasmaycon120-lgtm)
 
 ## Visão geral
 
@@ -58,6 +59,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 .
 ├── android/
 ├── assets/
+├── docs/
 ├── ios/
 ├── lib/
 ├── test/
@@ -109,9 +111,9 @@ flutter run
 
 ## Demo web e builds de release
 
-A versão web publicada pelo GitHub Pages está disponível em:
+A versão web está **online** e pode ser acessada por celular ou computador:
 
-**https://sqeducaplay.github.io/SQEducaPlay/**
+**[Abrir SQEducaPlay](https://sqeducaplay.github.io/SQEducaPlay/)**
 
 Cada push em `main` gera a versão web e o APK Android. Para baixar a versão mais recente do APK, acesse:
 
@@ -148,7 +150,10 @@ Os conteúdos são organizados por ano escolar e alinhados a critérios pedagóg
 
 ## Documentação complementar
 
-A documentação do projeto está organizada em materiais de apoio dentro do repositório, incluindo orientações sobre banco de dados, estrutura, gestão escolar e evolução funcional.
+- [Índice da documentação](docs/README.md)
+- [Documentação técnica](DOCUMENTACAO_TECNICA.md): arquitetura, estrutura e decisões do software.
+- [Guia de contribuição](CONTRIBUTING.md): branches, commits, testes e revisão.
+- [Rascunho do Plano de Ação Extensionista](docs/plano-de-acao-p1.md): roteiro e indicadores propostos para a oficina; depende de confirmação dos dados da escola parceira.
 
 ## Status do projeto
 

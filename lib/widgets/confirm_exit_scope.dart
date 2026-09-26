@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import '../pages/access_choice_page.dart';
+import '../services/session_service.dart';
 
 class ConfirmExitScope extends StatefulWidget {
   final Widget child;
+  final WidgetBuilder? startPageBuilder;
 
-  const ConfirmExitScope({super.key, required this.child});
+  const ConfirmExitScope({
+    super.key,
+    required this.child,
+    this.startPageBuilder,
+  });
 
   @override
   State<ConfirmExitScope> createState() => _ConfirmExitScopeState();
@@ -21,7 +28,7 @@ class _ConfirmExitScopeState extends State<ConfirmExitScope> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sair do SQEducaPlay?'),
-        content: const Text('Deseja realmente sair do aplicativo?'),
+        content: const Text('Deseja sair da conta e voltar ao inicio?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -37,7 +44,14 @@ class _ConfirmExitScopeState extends State<ConfirmExitScope> {
 
     _showingDialog = false;
     if (shouldExit == true) {
-      await SystemNavigator.pop();
+      await SessionService.logout();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: widget.startPageBuilder ?? (_) => const AccessChoicePage(),
+        ),
+        (_) => false,
+      );
     }
   }
 

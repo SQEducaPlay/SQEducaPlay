@@ -43,6 +43,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - gestão de escolas, professores, alunos e convites;
 - persistência local de dados com SQLite;
 - funcionamento offline em parte do fluxo principal;
+- acesso online experimental com conta de responsável, perfis familiares e sincronização de quizzes;
 - suporte a web e mobile com interface responsiva.
 
 ## Tecnologias
@@ -52,6 +53,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - SQLite
 - Material Design
 - GitHub para versionamento
+- Supabase (autenticação e sincronização online experimental)
 
 ## Estrutura do projeto
 
@@ -120,6 +122,11 @@ Cada push em `main` gera a versão web e o APK Android. Para baixar a versão ma
 **https://github.com/SQEducaPlay/SQEducaPlay/actions/workflows/release.yml**
 
 > O APK gerado pelo workflow é destinado a testes e distribuição direta.
+
+O acesso de responsável/Supabase está em validação. As contas antigas continuam
+locais até que o responsável escolha explicitamente importar o histórico para
+um perfil online. Não use dados identificáveis de crianças enquanto a revisão
+institucional e do aviso de privacidade estiver pendente.
 
 ## Acesso do aluno
 

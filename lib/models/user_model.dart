@@ -17,6 +17,7 @@ class User {
   final String? guardianName;
   final DateTime? consentAt;
   final String? consentVersion;
+  final String? remoteStudentId;
 
   User({
     this.id,
@@ -37,6 +38,7 @@ class User {
     this.guardianName,
     this.consentAt,
     this.consentVersion,
+    this.remoteStudentId,
   });
 
   User copy({
@@ -58,27 +60,28 @@ class User {
     String? guardianName,
     DateTime? consentAt,
     String? consentVersion,
-  }) =>
-      User(
-        id: id ?? this.id,
-        username: username ?? this.username,
-        password: password ?? this.password,
-        fullName: fullName ?? this.fullName,
-        nickname: nickname ?? this.nickname,
-        grade: grade ?? this.grade,
-        classGroup: classGroup ?? this.classGroup,
-        schoolId: schoolId ?? this.schoolId,
-        role: role ?? this.role,
-        isApproved: isApproved ?? this.isApproved,
-        createdAt: createdAt ?? this.createdAt,
-        lastLogin: lastLogin ?? this.lastLogin,
-        pontuacaoTotal: pontuacaoTotal ?? this.pontuacaoTotal,
-        estrelasTotal: estrelasTotal ?? this.estrelasTotal,
-        profilePhotoPath: profilePhotoPath ?? this.profilePhotoPath,
-        guardianName: guardianName ?? this.guardianName,
-        consentAt: consentAt ?? this.consentAt,
-        consentVersion: consentVersion ?? this.consentVersion,
-      );
+    String? remoteStudentId,
+  }) => User(
+    id: id ?? this.id,
+    username: username ?? this.username,
+    password: password ?? this.password,
+    fullName: fullName ?? this.fullName,
+    nickname: nickname ?? this.nickname,
+    grade: grade ?? this.grade,
+    classGroup: classGroup ?? this.classGroup,
+    schoolId: schoolId ?? this.schoolId,
+    role: role ?? this.role,
+    isApproved: isApproved ?? this.isApproved,
+    createdAt: createdAt ?? this.createdAt,
+    lastLogin: lastLogin ?? this.lastLogin,
+    pontuacaoTotal: pontuacaoTotal ?? this.pontuacaoTotal,
+    estrelasTotal: estrelasTotal ?? this.estrelasTotal,
+    profilePhotoPath: profilePhotoPath ?? this.profilePhotoPath,
+    guardianName: guardianName ?? this.guardianName,
+    consentAt: consentAt ?? this.consentAt,
+    consentVersion: consentVersion ?? this.consentVersion,
+    remoteStudentId: remoteStudentId ?? this.remoteStudentId,
+  );
 
   Map<String, dynamic> toMap() {
     return {
@@ -100,6 +103,7 @@ class User {
       'guardianName': guardianName,
       'consentAt': consentAt?.toIso8601String(),
       'consentVersion': consentVersion,
+      'remoteStudentId': remoteStudentId,
     };
   }
 
@@ -115,14 +119,29 @@ class User {
       schoolId: map['schoolId'] as String?,
       role: map['role'] as String,
       isApproved: (map['isApproved'] as int? ?? 1) == 1,
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt'] as String) : null,
-      lastLogin: map['lastLogin'] != null ? DateTime.parse(map['lastLogin'] as String) : null,
-      pontuacaoTotal: (map['pontuacao_total'] is int) ? map['pontuacao_total'] as int : ((map['pontuacao_total'] is String) ? int.tryParse(map['pontuacao_total'] as String) : 0),
-      estrelasTotal: (map['estrelas_total'] is int) ? map['estrelas_total'] as int : ((map['estrelas_total'] is String) ? int.tryParse(map['estrelas_total'] as String) : 0),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : null,
+      lastLogin: map['lastLogin'] != null
+          ? DateTime.parse(map['lastLogin'] as String)
+          : null,
+      pontuacaoTotal: (map['pontuacao_total'] is int)
+          ? map['pontuacao_total'] as int
+          : ((map['pontuacao_total'] is String)
+                ? int.tryParse(map['pontuacao_total'] as String)
+                : 0),
+      estrelasTotal: (map['estrelas_total'] is int)
+          ? map['estrelas_total'] as int
+          : ((map['estrelas_total'] is String)
+                ? int.tryParse(map['estrelas_total'] as String)
+                : 0),
       profilePhotoPath: map['profilePhotoPath'] as String?,
       guardianName: map['guardianName'] as String?,
-      consentAt: map['consentAt'] != null ? DateTime.tryParse(map['consentAt'] as String) : null,
+      consentAt: map['consentAt'] != null
+          ? DateTime.tryParse(map['consentAt'] as String)
+          : null,
       consentVersion: map['consentVersion'] as String?,
+      remoteStudentId: map['remoteStudentId'] as String?,
     );
   }
 }

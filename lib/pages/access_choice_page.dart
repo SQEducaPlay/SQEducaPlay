@@ -3,15 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../login_page.dart';
 import '../register_page.dart';
+import '../services/backend_service.dart';
 import 'teacher_setup_page.dart';
+import 'guardian_access_page.dart';
 
 class AccessChoicePage extends StatefulWidget {
   final bool skipRememberedAudience;
 
-  const AccessChoicePage({
-    super.key,
-    this.skipRememberedAudience = false,
-  });
+  const AccessChoicePage({super.key, this.skipRememberedAudience = false});
 
   @override
   State<AccessChoicePage> createState() => _AccessChoicePageState();
@@ -40,43 +39,45 @@ class _AccessChoicePageState extends State<AccessChoicePage>
       parent: _controller,
       curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
-    ));
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _studentOpacity = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.25, 0.72, curve: Curves.easeOut),
     );
-    _studentSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.25, 0.72, curve: Curves.easeOutCubic),
-    ));
+    _studentSlide =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.25, 0.72, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _teacherOpacity = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
-    _teacherSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-    ));
+    _teacherSlide =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _controller.forward();
   }
 
   Future<void> _redirectToRememberedLogin() async {
-    if (widget.skipRememberedAudience) return;
+    if (widget.skipRememberedAudience || BackendService.instance.isConfigured) {
+      return;
+    }
 
     final preferences = await SharedPreferences.getInstance();
     final audienceName = preferences.getString('last_login_audience');
@@ -100,6 +101,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
 
   @override
   Widget build(BuildContext context) {
+    final onlineBackendConfigured = BackendService.instance.isConfigured;
     return Scaffold(
       body: Stack(
         children: [
@@ -123,7 +125,10 @@ class _AccessChoicePageState extends State<AccessChoicePage>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
                   child: Column(
@@ -154,27 +159,74 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                         ),
                       ),
                       const SizedBox(height: 20),
+                      if (BackendService.instance.isConfigured) ...[
+                        _AccessCard(
+                          title: 'Sou Responsavel',
+                          subtitle:
+                              'Acesse os perfis da sua familia em qualquer aparelho',
+                          color: const Color(0xFF27805A),
+                          icon: Icons.family_restroom,
+                          primaryLabel: 'Entrar na conta',
+                          onPrimary: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const GuardianAccessPage(),
+                              ),
+                            );
+                          },
+                          secondaryLabel: 'Criar conta da familia',
+                          onSecondary: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const GuardianAccessPage(
+                                  startWithSignUp: true,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'O acesso online de educadores ainda nao foi liberado. '
+                          'As opcoes abaixo continuam locais e nao sincronizam.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF274C77)),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       SlideTransition(
                         position: _studentSlide,
                         child: FadeTransition(
                           opacity: _studentOpacity,
                           child: _AccessCard(
-                            title: 'Sou Aluno',
-                            subtitle: 'Entrar para estudar ou criar conta de aluno',
+                            title: onlineBackendConfigured
+                                ? 'Aluno (modo local)'
+                                : 'Sou Aluno',
+                            subtitle: onlineBackendConfigured
+                                ? 'Contas antigas deste aparelho; nao sincronizam com a nuvem'
+                                : 'Entrar para estudar ou criar conta de aluno',
                             color: const Color(0xFF2B7CD3),
                             icon: Icons.school,
-                            primaryLabel: 'Entrar como aluno',
+                            primaryLabel: onlineBackendConfigured
+                                ? 'Entrar neste aparelho'
+                                : 'Entrar como aluno',
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const LoginPage(audience: LoginAudience.student),
+                                  builder: (_) => const LoginPage(
+                                    audience: LoginAudience.student,
+                                  ),
                                 ),
                               );
                             },
-                            secondaryLabel: 'Cadastrar aluno',
+                            secondaryLabel: onlineBackendConfigured
+                                ? 'Criar conta local'
+                                : 'Cadastrar aluno',
                             onSecondary: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
                               );
                             },
                           ),
@@ -186,22 +238,30 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                         child: FadeTransition(
                           opacity: _teacherOpacity,
                           child: _AccessCard(
-                            title: 'Sou Educador',
-                            subtitle: 'Acesse o painel da sua turma',
+                            title: onlineBackendConfigured
+                                ? 'Educador (modo local)'
+                                : 'Sou Educador',
+                            subtitle: onlineBackendConfigured
+                                ? 'O acesso online sera liberado em uma proxima etapa'
+                                : 'Acesse o painel da sua turma',
                             color: const Color(0xFFB46A00),
                             icon: Icons.workspace_premium,
                             primaryLabel: 'Entrar como educador',
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const LoginPage(audience: LoginAudience.teacher),
+                                  builder: (_) => const LoginPage(
+                                    audience: LoginAudience.teacher,
+                                  ),
                                 ),
                               );
                             },
                             secondaryLabel: 'Primeiro acesso',
                             onSecondary: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const TeacherSetupPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const TeacherSetupPage(),
+                                ),
                               );
                             },
                             secondaryAsLink: true,
@@ -223,10 +283,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
@@ -318,11 +375,16 @@ class _AccessCard extends StatelessWidget {
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 primaryLabel,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
               ),
             ),
           ),
@@ -339,21 +401,32 @@ class _AccessCard extends StatelessWidget {
                     ),
                     child: Text(
                       secondaryLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   )
                 : OutlinedButton(
                     onPressed: onSecondary,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: color,
-                      side: BorderSide(color: color.withValues(alpha: 0.62), width: 1.2),
+                      side: BorderSide(
+                        color: color.withValues(alpha: 0.62),
+                        width: 1.2,
+                      ),
                       minimumSize: const Size.fromHeight(48),
                       padding: const EdgeInsets.symmetric(vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       secondaryLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
           ),

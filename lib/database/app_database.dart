@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqeducaplay/models/user_model.dart';
@@ -113,7 +115,7 @@ class AppDatabase {
     try {
       return await openDatabase(
         path,
-        version: 11,
+        version: 13,
         onConfigure: (Database db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
@@ -193,6 +195,37 @@ class AppDatabase {
               'ALTER TABLE users ADD COLUMN isApproved INTEGER NOT NULL DEFAULT 1',
             );
           }
+          if (oldVersion < 12) {
+            await db.execute(
+              'ALTER TABLE users ADD COLUMN remoteStudentId TEXT',
+            );
+            await db.execute(
+              'CREATE UNIQUE INDEX IF NOT EXISTS users_remote_student_id '
+              'ON users (remoteStudentId) WHERE remoteStudentId IS NOT NULL',
+            );
+          }
+          if (oldVersion < 13) {
+            await db.execute(
+              'ALTER TABLE partidas ADD COLUMN remote_student_id TEXT',
+            );
+            await db.execute(
+              'ALTER TABLE partidas ADD COLUMN client_session_id TEXT',
+            );
+            await db.execute(
+              'ALTER TABLE partidas ADD COLUMN remote_session_id TEXT',
+            );
+            await db.execute(
+              'ALTER TABLE partidas ADD COLUMN remote_synced INTEGER NOT NULL DEFAULT 1',
+            );
+            await db.execute(
+              'CREATE UNIQUE INDEX IF NOT EXISTS partidas_client_session_id '
+              'ON partidas (client_session_id) WHERE client_session_id IS NOT NULL',
+            );
+            await db.execute(
+              'CREATE UNIQUE INDEX IF NOT EXISTS partidas_remote_session_id '
+              'ON partidas (remote_session_id) WHERE remote_session_id IS NOT NULL',
+            );
+          }
         },
         onOpen: (Database db) async {
           await _ensureRequiredTables(db);
@@ -254,6 +287,7 @@ class AppDatabase {
         guardianName $textNullable,
         consentAt TEXT,
         consentVersion $textNullable,
+        remoteStudentId $textNullable UNIQUE,
         createdAt TEXT NOT NULL,
         lastLogin TEXT
       )
@@ -287,9 +321,21 @@ class AppDatabase {
         total_perguntas INTEGER NOT NULL,
         tempo_segundos INTEGER,
         data_partida TEXT NOT NULL,
+        remote_student_id TEXT,
+        client_session_id TEXT,
+        remote_session_id TEXT,
+        remote_synced INTEGER NOT NULL DEFAULT 1,
         FOREIGN KEY (usuario_id) REFERENCES users (id)
       )
     ''');
+    await db.execute(
+      'CREATE UNIQUE INDEX partidas_client_session_id '
+      'ON partidas (client_session_id) WHERE client_session_id IS NOT NULL',
+    );
+    await db.execute(
+      'CREATE UNIQUE INDEX partidas_remote_session_id '
+      'ON partidas (remote_session_id) WHERE remote_session_id IS NOT NULL',
+    );
 
     // Tabela de progresso
     await db.execute('''
@@ -534,6 +580,252 @@ class AppDatabase {
       });
     }
     await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingRemoteQuizSessions(
+    String remoteStudentId,
+  ) async {
+    final pending = <Map<String, dynamic>>[];
+    if (!_dbAvailable) {
+      for (final partida in _inMemoryPartidas.where(
+        (row) =>
+            row['remote_student_id'] == remoteStudentId &&
+            row['remote_synced'] == 0,
+      )) {
+        final partidaId = partida['id'];
+        final attempts = _inMemoryQuestionAttempts
+            .where((row) => row['partida_id'] == partidaId)
+            .map(
+              (row) => {
+                'question': row['pergunta'],
+                'selected_answer': row['resposta_selecionada'],
+                'correct_answer': row['resposta_correta'],
+                'is_correct': row['acertou'] == 1,
+                'question_order': row['ordem_pergunta'],
+              },
+            )
+            .toList();
+        pending.add({...partida, 'attempts': attempts});
+      }
+      return pending;
+    }
+
+    final db = await database;
+    final rows = await db.query(
+      'partidas',
+      where: 'remote_student_id = ? AND remote_synced = 0',
+      whereArgs: [remoteStudentId],
+      orderBy: 'id',
+    );
+    for (final row in rows) {
+      final attempts = await db.query(
+        'quiz_question_attempts',
+        columns: [
+          'pergunta',
+          'resposta_selecionada',
+          'resposta_correta',
+          'acertou',
+          'ordem_pergunta',
+        ],
+        where: 'partida_id = ?',
+        whereArgs: [row['id']],
+        orderBy: 'ordem_pergunta',
+      );
+      pending.add({
+        ...row,
+        'attempts': attempts
+            .map(
+              (attempt) => {
+                'question': attempt['pergunta'],
+                'selected_answer': attempt['resposta_selecionada'],
+                'correct_answer': attempt['resposta_correta'],
+                'is_correct': attempt['acertou'] == 1,
+                'question_order': attempt['ordem_pergunta'],
+              },
+            )
+            .toList(),
+      });
+    }
+    return pending;
+  }
+
+  Future<void> markRemoteQuizSessionSynced(
+    String clientSessionId, {
+    required String remoteSessionId,
+  }) async {
+    if (!_dbAvailable) {
+      for (final row in _inMemoryPartidas) {
+        if (row['client_session_id'] == clientSessionId) {
+          row['remote_synced'] = 1;
+          row['remote_session_id'] = remoteSessionId;
+        }
+      }
+      return;
+    }
+    final db = await database;
+    await db.update(
+      'partidas',
+      {'remote_synced': 1, 'remote_session_id': remoteSessionId},
+      where: 'client_session_id = ?',
+      whereArgs: [clientSessionId],
+    );
+  }
+
+  Future<void> importRemoteQuizSession({
+    required Map<String, dynamic> session,
+    required List<Map<String, dynamic>> attempts,
+  }) async {
+    final remoteSessionId = session['id'] as String;
+    if (!_dbAvailable) {
+      if (_inMemoryPartidas.any(
+        (row) => row['remote_session_id'] == remoteSessionId,
+      )) {
+        return;
+      }
+    } else {
+      final db = await database;
+      final existing = await db.query(
+        'partidas',
+        columns: ['id'],
+        where: 'remote_session_id = ?',
+        whereArgs: [remoteSessionId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) return;
+    }
+
+    final remoteStudentId = session['student_id'] as String?;
+    if (remoteStudentId == null) return;
+    final student = await _findLocalRemoteStudent(remoteStudentId);
+    if (student?.id == null) return;
+
+    final completedAt =
+        session['completed_at'] as String? ?? DateTime.now().toIso8601String();
+    final partidaId = await salvarPartida({
+      'usuario_id': student!.id!,
+      'materia': session['subject'] as String? ?? '',
+      'ano': session['grade'] as String? ?? '',
+      'topico': session['topic'],
+      'pontuacao': session['score'] as int? ?? 0,
+      'estrelas': session['stars'] as int? ?? 0,
+      'acertos': session['correct_answers'] as int? ?? 0,
+      'total_perguntas': session['total_questions'] as int? ?? 0,
+      'tempo_segundos': session['duration_seconds'],
+      'data_partida': completedAt,
+      'remote_student_id': remoteStudentId,
+      'client_session_id': session['client_session_id'],
+      'remote_session_id': remoteSessionId,
+      'remote_synced': 1,
+    });
+
+    if (attempts.isEmpty) return;
+    await salvarTentativasPartida(
+      usuarioId: student.id!,
+      partidaId: partidaId,
+      materia: session['subject'] as String? ?? '',
+      ano: session['grade'] as String? ?? '',
+      topico: session['topic'] as String?,
+      tentativas: attempts
+          .map(
+            (attempt) => {
+              'pergunta': attempt['question'],
+              'resposta_selecionada': attempt['selected_answer'],
+              'resposta_correta': attempt['correct_answer'],
+              'acertou': attempt['is_correct'] == true,
+              'ordem_pergunta': attempt['question_order'],
+              'data_tentativa': attempt['created_at'] ?? completedAt,
+            },
+          )
+          .toList(),
+    );
+  }
+
+  Future<User?> _findLocalRemoteStudent(String remoteStudentId) async {
+    if (!_dbAvailable) {
+      for (final user in _inMemoryUsers) {
+        if (user.remoteStudentId == remoteStudentId) return user;
+      }
+      return null;
+    }
+    final db = await database;
+    final rows = await db.query(
+      'users',
+      where: 'remoteStudentId = ?',
+      whereArgs: [remoteStudentId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : User.fromMap(rows.first);
+  }
+
+  Future<int> attachLocalStudentHistoryToRemote({
+    required int sourceUserId,
+    required int targetUserId,
+    required String remoteStudentId,
+    required List<String> clientSessionIds,
+  }) async {
+    if (!_dbAvailable) {
+      final sourceSessions = _inMemoryPartidas
+          .where(
+            (row) =>
+                row['usuario_id'] == sourceUserId &&
+                row['remote_student_id'] == null,
+          )
+          .toList();
+      if (sourceSessions.length != clientSessionIds.length) {
+        throw StateError('O historico local mudou durante a migracao.');
+      }
+      for (var i = 0; i < sourceSessions.length; i++) {
+        final session = sourceSessions[i];
+        final partidaId = session['id'];
+        session
+          ..['usuario_id'] = targetUserId
+          ..['remote_student_id'] = remoteStudentId
+          ..['client_session_id'] = clientSessionIds[i]
+          ..['remote_synced'] = 0;
+        for (final attempt in _inMemoryQuestionAttempts.where(
+          (row) => row['partida_id'] == partidaId,
+        )) {
+          attempt['usuario_id'] = targetUserId;
+        }
+      }
+      return sourceSessions.length;
+    }
+
+    final db = await database;
+    return db.transaction((transaction) async {
+      final sourceSessions = await transaction.query(
+        'partidas',
+        columns: ['id'],
+        where: 'usuario_id = ? AND remote_student_id IS NULL',
+        whereArgs: [sourceUserId],
+        orderBy: 'id',
+      );
+      if (sourceSessions.length != clientSessionIds.length) {
+        throw StateError('O historico local mudou durante a migracao.');
+      }
+
+      for (var i = 0; i < sourceSessions.length; i++) {
+        final partidaId = sourceSessions[i]['id'] as int;
+        await transaction.update(
+          'partidas',
+          {
+            'usuario_id': targetUserId,
+            'remote_student_id': remoteStudentId,
+            'client_session_id': clientSessionIds[i],
+            'remote_synced': 0,
+          },
+          where: 'id = ?',
+          whereArgs: [partidaId],
+        );
+        await transaction.update(
+          'quiz_question_attempts',
+          {'usuario_id': targetUserId},
+          where: 'partida_id = ?',
+          whereArgs: [partidaId],
+        );
+      }
+      return sourceSessions.length;
+    });
   }
 
   Future<Map<String, int>> _getUserTotalsFromPartidas(int userId) async {
@@ -998,12 +1290,75 @@ class AppDatabase {
       'guardianName': user.guardianName,
       'consentAt': user.consentAt?.toIso8601String(),
       'consentVersion': user.consentVersion,
+      'remoteStudentId': user.remoteStudentId,
       'role': user.role,
       'pontuacao_total': 0,
       'estrelas_total': 0,
       'createdAt': createdAt.toIso8601String(),
     });
     return user.copy(id: id, password: hashedPassword, createdAt: createdAt);
+  }
+
+  Future<User> getOrCreateRemoteStudent({
+    required String remoteStudentId,
+    required String username,
+    required String fullName,
+    String? nickname,
+    required String grade,
+    required bool isApproved,
+  }) async {
+    User refresh(User user) => user.copy(
+      username: username,
+      fullName: fullName,
+      nickname: nickname,
+      grade: grade,
+      isApproved: isApproved,
+    );
+
+    if (!_dbAvailable) {
+      for (final user in _inMemoryUsers) {
+        if (user.remoteStudentId == remoteStudentId) {
+          final updated = refresh(user);
+          await updateUser(updated);
+          return updated;
+        }
+      }
+    } else {
+      final db = await database;
+      final rows = await db.query(
+        'users',
+        where: 'remoteStudentId = ?',
+        whereArgs: [remoteStudentId],
+        limit: 1,
+      );
+      if (rows.isNotEmpty) {
+        final updated = refresh(User.fromMap(rows.first));
+        await updateUser(updated);
+        return updated;
+      }
+    }
+
+    final suffix = remoteStudentId.replaceAll('-', '');
+    final existingUsername = await getUserByUsername(username);
+    final localUsername = existingUsername == null
+        ? username
+        : '_remote_${suffix.substring(0, min(20, suffix.length))}';
+    final randomPassword = List.generate(
+      32,
+      (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return createUser(
+      User(
+        username: localUsername,
+        password: randomPassword,
+        fullName: fullName,
+        nickname: nickname,
+        grade: grade,
+        role: 'student',
+        isApproved: isApproved,
+        remoteStudentId: remoteStudentId,
+      ),
+    );
   }
 
   Future<void> ensureDevelopmentAdmin({
@@ -1320,6 +1675,7 @@ class AppDatabase {
         'guardianName',
         'consentAt',
         'consentVersion',
+        'remoteStudentId',
         'createdAt',
         'lastLogin',
       ],
@@ -1364,6 +1720,7 @@ class AppDatabase {
           'guardianName',
           'consentAt',
           'consentVersion',
+          'remoteStudentId',
           'createdAt',
           'lastLogin',
         ],
@@ -1401,6 +1758,21 @@ class AppDatabase {
       _dbAvailable = false;
       return List<User>.from(_inMemoryUsers);
     }
+  }
+
+  Future<List<User>> getLocalStudentsWithUnlinkedHistory() async {
+    final users = (await getAllUsers())
+        .where((user) => user.role == 'student' && user.remoteStudentId == null)
+        .toList();
+    final studentsWithHistory = <User>[];
+    for (final user in users) {
+      if (user.id == null) continue;
+      final sessions = await buscarPartidasUsuario(user.id!);
+      if (sessions.any((session) => session['remote_student_id'] == null)) {
+        studentsWithHistory.add(user);
+      }
+    }
+    return studentsWithHistory;
   }
 
   Future<int> updateUser(User user) async {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../utils/logger.dart';
 import '../database/app_database.dart';
 import '../services/privacy_settings_service.dart';
+import '../services/progresso_service.dart';
+import '../services/user_service.dart';
 import '../widgets/app_bar.dart';
 
 class RankingDatabasePage extends StatefulWidget {
@@ -18,6 +20,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
   bool _carregando = true;
   String _abaSelecionada = 'geral';
   bool _anonymizeNames = true;
+  Map<String, dynamic>? _remoteStudentSummary;
 
   @override
   void initState() {
@@ -29,13 +32,35 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
     setState(() => _carregando = true);
 
     try {
+      final currentUser = UserService().currentUser;
+      if (currentUser?.remoteStudentId != null) {
+        final progress = ProgressoService().getProgresso(currentUser!.username);
+        setState(() {
+          _remoteStudentSummary = {
+            'name': currentUser.nickname ?? currentUser.fullName,
+            'points': progress.pontuacaoTotal,
+            'stars': progress.estrelasTotal,
+            'quizzes': progress.quizesCompletados,
+          };
+          _carregando = false;
+        });
+        return;
+      }
+
       final privacy = PrivacySettingsService();
       await privacy.load();
-  final geral = await AppDatabase.instance.buscarRankingGeral(limit: 20);
-  final portugues = await AppDatabase.instance.buscarRankingPorMateria('Português', limit: 20);
-  final matematica = await AppDatabase.instance.buscarRankingPorMateria('Matemática', limit: 20);
+      final geral = await AppDatabase.instance.buscarRankingGeral(limit: 20);
+      final portugues = await AppDatabase.instance.buscarRankingPorMateria(
+        'Português',
+        limit: 20,
+      );
+      final matematica = await AppDatabase.instance.buscarRankingPorMateria(
+        'Matemática',
+        limit: 20,
+      );
 
       setState(() {
+        _remoteStudentSummary = null;
         _rankingGeral = geral;
         _rankingPortugues = portugues;
         _rankingMatematica = matematica;
@@ -43,7 +68,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
         _carregando = false;
       });
     } catch (e) {
-  Logger.d('Erro ao carregar rankings: $e');
+      Logger.d('Erro ao carregar rankings: $e');
       setState(() => _carregando = false);
     }
   }
@@ -63,30 +88,77 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
       ),
       body: Column(
         children: [
-          // Abas
-          Container(
-            color: Colors.orange.shade50,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildAbaButton('Geral', 'geral', Icons.emoji_events),
-                ),
-                Expanded(
-                  child: _buildAbaButton('Português', 'portugues', Icons.abc),
-                ),
-                Expanded(
-                  child: _buildAbaButton('Matemática', 'matematica', Icons.calculate),
-                ),
-              ],
+          if (_remoteStudentSummary == null) ...[
+            // Abas
+            Container(
+              color: Colors.orange.shade50,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildAbaButton(
+                      'Geral',
+                      'geral',
+                      Icons.emoji_events,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildAbaButton('Português', 'portugues', Icons.abc),
+                  ),
+                  Expanded(
+                    child: _buildAbaButton(
+                      'Matemática',
+                      'matematica',
+                      Icons.calculate,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           // Conteúdo
           Expanded(
             child: _carregando
                 ? const Center(child: CircularProgressIndicator())
-                : _buildRankingList(),
+                : _remoteStudentSummary == null
+                ? _buildRankingList()
+                : _buildRemoteStudentSummary(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRemoteStudentSummary() {
+    final summary = _remoteStudentSummary!;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events, size: 56, color: Colors.orange),
+                const SizedBox(height: 12),
+                Text(
+                  'Progresso de ${summary['name']}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text('Pontos: ${summary['points']}'),
+                Text('Estrelas: ${summary['stars']}'),
+                Text('Quizzes: ${summary['quizzes']}'),
+                const SizedBox(height: 12),
+                const Text(
+                  'O ranking compartilhado entre estudantes ainda nao esta habilitado.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -130,7 +202,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
 
   Widget _buildRankingList() {
     List<Map<String, dynamic>> ranking;
-    
+
     switch (_abaSelecionada) {
       case 'portugues':
         ranking = _rankingPortugues;
@@ -155,18 +227,12 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
             const SizedBox(height: 16),
             Text(
               'Nenhum dado no ranking ainda',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
             Text(
               'Jogue um quiz para aparecer aqui!',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -181,7 +247,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
         itemBuilder: (context, index) {
           final item = ranking[index];
           final posicao = index + 1;
-          
+
           return _buildRankingCard(item, posicao);
         },
       ),
@@ -204,9 +270,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
       elevation: posicao <= 3 ? 8 : 2,
       margin: const EdgeInsets.only(bottom: 12),
       color: cor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -235,7 +299,9 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
                       Icon(
                         Icons.star,
                         size: 14,
-                        color: posicao <= 3 ? Colors.yellow.shade200 : Colors.amber,
+                        color: posicao <= 3
+                            ? Colors.yellow.shade200
+                            : Colors.amber,
                       ),
                       const SizedBox(width: 4),
                       Flexible(
@@ -244,7 +310,9 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: posicao <= 3 ? Colors.white70 : Colors.black54,
+                            color: posicao <= 3
+                                ? Colors.white70
+                                : Colors.black54,
                             fontSize: 12,
                           ),
                         ),
@@ -261,7 +329,11 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Icon(Icons.emoji_events, color: Colors.yellow, size: 22),
+                  const Icon(
+                    Icons.emoji_events,
+                    color: Colors.yellow,
+                    size: 22,
+                  ),
                   const SizedBox(height: 2),
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -270,7 +342,9 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: posicao <= 3 ? Colors.white : Colors.orange.shade800,
+                        color: posicao <= 3
+                            ? Colors.white
+                            : Colors.orange.shade800,
                       ),
                     ),
                   ),
@@ -305,10 +379,7 @@ class _RankingDatabasePageState extends State<RankingDatabasePage> {
         width: 46,
         height: 46,
         alignment: Alignment.center,
-        child: Text(
-          medalha,
-          style: const TextStyle(fontSize: 32),
-        ),
+        child: Text(medalha, style: const TextStyle(fontSize: 32)),
       );
     }
 

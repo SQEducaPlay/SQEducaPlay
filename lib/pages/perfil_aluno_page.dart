@@ -289,7 +289,7 @@ class _PerfilAlunoPageState extends State<PerfilAlunoPage> {
                     ),
                     _buildStatItem(
                       Icons.format_list_numbered,
-                      '#$posicaoRanking',
+                      posicaoRanking == 0 ? '—' : '#$posicaoRanking',
                       'Ranking',
                       Colors.purple,
                     ),

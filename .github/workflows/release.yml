@@ -14,6 +14,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,8 +30,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Verify public Supabase build configuration
+        run: |
+          test -n "$SUPABASE_URL" || (echo "::error::Set repository variable SUPABASE_URL" && exit 1)
+          test -n "$SUPABASE_PUBLISHABLE_KEY" || (echo "::error::Set repository variable SUPABASE_PUBLISHABLE_KEY" && exit 1)
+
       - name: Build web
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: >-
+          flutter build web --release
+          --base-href "/${{ github.event.repository.name }}/"
+          --dart-define=SUPABASE_URL="$SUPABASE_URL"
+          --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+          --dart-define=BACKEND_REQUIRED=true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -55,7 +68,11 @@ jobs:
           EOF
 
       - name: Build Android APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: >-
+          flutter build apk --release --android-skip-build-dependency-validation
+          --dart-define=SUPABASE_URL="$SUPABASE_URL"
+          --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+          --dart-define=BACKEND_REQUIRED=true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

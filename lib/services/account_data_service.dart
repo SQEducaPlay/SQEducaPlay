@@ -53,14 +53,27 @@ abstract final class AccountDataService {
         .from('school_memberships')
         .select('school_id, role, status, login_alias, created_at')
         .eq('user_id', authUser.id);
-    final enrollments = await backend.client
-        .from('student_enrollments')
-        .select('classroom_id, active, created_at')
-        .eq('student_id', authUser.id);
-    final sessions = await backend.client
-        .from('quiz_sessions')
-        .select()
-        .eq('student_id', authUser.id);
+    final children = await backend.client
+        .from('student_profiles')
+        .select(
+          'id, username, full_name, nickname, grade, school_id, status, created_at',
+        )
+        .eq('guardian_id', authUser.id);
+    final studentIds = children
+        .map((child) => child['id'] as String)
+        .toList(growable: false);
+    final enrollments = studentIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await backend.client
+              .from('student_enrollments')
+              .select('student_id, classroom_id, active, created_at')
+              .inFilter('student_id', studentIds);
+    final sessions = studentIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await backend.client
+              .from('quiz_sessions')
+              .select()
+              .inFilter('student_id', studentIds);
     final sessionIds = sessions
         .map((session) => session['id'] as String)
         .toList(growable: false);
@@ -70,19 +83,22 @@ abstract final class AccountDataService {
               .from('question_attempts')
               .select()
               .inFilter('quiz_session_id', sessionIds);
-    final progress = await backend.client
-        .from('student_progress')
-        .select()
-        .eq('student_id', authUser.id);
+    final progress = studentIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await backend.client
+              .from('student_progress')
+              .select()
+              .inFilter('student_id', studentIds);
     final consents = await backend.client
         .from('consent_records')
         .select()
-        .eq('student_id', authUser.id);
+        .eq('guardian_id', authUser.id);
 
     return {
       'auth': {'id': authUser.id, 'email': authUser.email},
       'profile': profile,
       'memberships': memberships,
+      'studentProfiles': children,
       'enrollments': enrollments,
       'quizSessions': sessions,
       'questionAttempts': attempts,
@@ -92,8 +108,27 @@ abstract final class AccountDataService {
   }
 
   static Future<void> deleteAccount(User user) async {
-    if (BackendService.instance.isInitialized &&
-        BackendService.instance.client.auth.currentUser != null) {
+    final backend = BackendService.instance;
+    final remoteStudentIds = <String>{};
+    if (backend.isInitialized && backend.client.auth.currentUser != null) {
+      final authUser = backend.client.auth.currentUser!;
+      final children = await backend.client
+          .from('student_profiles')
+          .select('id')
+          .eq('guardian_id', authUser.id);
+      remoteStudentIds.addAll(children.map((child) => child['id'] as String));
+    }
+
+    final localUsers = (await AppDatabase.instance.getAllUsers())
+        .where(
+          (localUser) =>
+              (localUser.remoteStudentId != null &&
+                  remoteStudentIds.contains(localUser.remoteStudentId)) ||
+              localUser.id == user.id,
+        )
+        .toList();
+
+    if (backend.isInitialized && backend.client.auth.currentUser != null) {
       final response = await BackendService.instance.client.functions.invoke(
         'delete-account',
       );
@@ -102,17 +137,21 @@ abstract final class AccountDataService {
       }
     }
 
-    if (user.id != null) {
-      final deleted = await AppDatabase.instance.deleteUser(user.id!);
+    final usersToDelete = {
+      for (final localUser in localUsers)
+        if (localUser.id != null) localUser.id!: localUser,
+    };
+    for (final localUser in usersToDelete.values) {
+      final deleted = await AppDatabase.instance.deleteUser(localUser.id!);
       if (deleted != 1) {
-        throw StateError('A conta local nao foi encontrada para exclusao.');
+        throw StateError('Nao foi possivel remover todos os dados locais.');
       }
+      await _deleteManagedProfilePhoto(localUser.profilePhotoPath);
+      await _removeUserPreferences(localUser.username);
+      ProgressoService().removeUserData(localUser.username);
+      UserService().removeUser(localUser.username);
     }
 
-    await _deleteManagedProfilePhoto(user.profilePhotoPath);
-    await _removeUserPreferences(user.username);
-    ProgressoService().removeUserData(user.username);
-    UserService().removeUser(user.username);
     await SessionService.logout();
   }
 

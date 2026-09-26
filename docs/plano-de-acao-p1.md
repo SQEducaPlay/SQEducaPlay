@@ -1,6 +1,6 @@
 # Plano de Ação Extensionista — SQEducaPlay
 
-> **Rascunho para validação.** Este documento não substitui o modelo oficial da disciplina nem autorização da escola. Os campos marcados como pendentes precisam ser confirmados antes de divulgar ou realizar a oficina.
+> **Plano preparatório, ainda não aprovado.** Este documento não substitui o modelo oficial da disciplina nem autorização da escola. Não divulgar como parceria confirmada nem realizar coleta/atividade com dados reais antes das aprovações. Os campos marcados como pendentes dependem da equipe e da escola.
 
 ## Identificação
 
@@ -17,9 +17,9 @@
 
 Apresentar o SQEducaPlay à comunidade escolar e avaliar, em uma atividade acompanhada, se os participantes conseguem acessar o aplicativo e concluir uma atividade educativa.
 
-## Atividade proposta
+## Roteiro da oficina
 
-Duração estimada: **15 a 30 minutos**, ajustada com a escola.
+Duração planejada: **20 minutos** (ajustável entre 15 e 30 minutos após alinhamento com a escola). O roteiro pronto para impressão está em [Kit de oficina e evidências](oficina/kit-de-evidencias.md).
 
 1. **Acolhimento e orientação (3–5 min):** explicar o objetivo do piloto, o uso do aplicativo e as regras definidas pela escola.
 2. **Acesso acompanhado (3–5 min):** abrir a versão web ou o APK e orientar a navegação. Usar dados fictícios/demonstrativos enquanto o piloto e os procedimentos de privacidade não forem aprovados pela escola.
@@ -41,16 +41,16 @@ Não registrar nomes, logins, respostas individuais ou outros dados de estudante
 
 ## Presença e acesso
 
-- A lista de presença deve seguir o modelo e as regras da escola; responsável pela guarda e prazo de retenção precisam ser definidos antes da atividade.
-- Um QR code pode apontar apenas para a URL pública do app: <https://sqeducaplay.github.io/SQEducaPlay/>.
+- A presença deve usar o modelo oficial da escola. A escola define quem guarda a lista e por quanto tempo; não incluir a lista identificável neste repositório.
+- O QR code da oficina deve apontar somente para a URL pública do app: <https://sqeducaplay.github.io/SQEducaPlay/>. A equipe deve gerar/imprimir o QR a partir desse endereço após confirmar que continua acessível no dia.
 - Não usar QR code para coletar dados de estudantes. Evitar fotografias identificáveis; qualquer registro de imagem depende de autorização específica da escola e dos responsáveis.
 
 ## Consentimento e privacidade
 
 - Obter aprovação institucional e seguir o modelo oficial de consentimento/assentimento indicado pela disciplina e pela escola.
-- Conferir a versão exibida no fluxo de cadastro antes de preparar qualquer material impresso. No código consultado para este rascunho, o cadastro usa `consentVersion` **2026-08-15**; a política de privacidade exibe `policyVersion` **2026-08-25-pilot**. São identificadores diferentes e não devem ser tratados como equivalentes.
+- O aviso e o cadastro usam agora a versão única **`2026-09-26-pilot`**, definida em `lib/config/privacy_policy_config.dart`. O material informativo para impressão referencia o mesmo identificador.
 - Não coletar nem inserir dados pessoais reais no piloto sem autorização e procedimento formal aprovados.
-- O texto final de qualquer termo impresso deve ser revisado e aprovado pela escola e pela disciplina; este rascunho não é um termo jurídico nem uma autorização de uso de imagem.
+- O [material para o responsável](oficina/termo-responsavel-piloto.md) é apenas um rascunho informativo. A equipe deve substituir/adaptar ao modelo oficial do AVA e obter aprovação da escola e da docente; ele não é termo jurídico nem autorização de uso de imagem.
 
 ## Evidências a organizar
 
@@ -67,4 +67,5 @@ Não registrar nomes, logins, respostas individuais ou outros dados de estudante
 - validar o indicador e o procedimento de registro pré/pós;
 - obter o modelo oficial da disciplina e as aprovações de consentimento aplicáveis;
 - definir com a escola o responsável pela lista de presença e sua retenção;
+- executar e registrar o [checklist de teste em dois aparelhos](oficina/kit-de-evidencias.md#teste-em-dois-aparelhos-offline);
 - revisar este plano com a escola e a docente antes de apresentá-lo como final.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqeducaplay/database/app_database.dart';
@@ -21,6 +22,11 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (_) async => null,
+        );
     UserService().addUserFromDb(User(
       id: 999001,
       username: username,
@@ -49,5 +55,13 @@ void main() {
 
     expect(find.byType(ProfessorDashboardPage), findsOneWidget);
     expect(find.byType(MateriasPage), findsNothing);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Deseja realmente sair do aplicativo?'), findsOneWidget);
+    await tester.tap(find.text('Continuar no app'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfessorDashboardPage), findsOneWidget);
   });
 }

@@ -14,6 +14,7 @@ import 'package:sqeducaplay/models/user_model.dart' as db_model;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'utils/logger.dart';
+import 'widgets/confirm_exit_scope.dart';
 
 enum LoginAudience { student, teacher }
 
@@ -192,14 +193,19 @@ class _LoginPageState extends State<LoginPage> {
       if (loggedUser.role == 'admin') {
         Navigator.of(
           context,
-        ).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
+        ).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ConfirmExitScope(child: HomePage()),
+          ),
+        );
       } else if (loggedUser.role == 'teacher') {
         // Correção P0-04: educadores devem cair no painel do educador,
         // nunca na área de matérias do aluno.
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) =>
-                ProfessorDashboardPage(username: loggedUser.username),
+            builder: (context) => ConfirmExitScope(
+              child: ProfessorDashboardPage(username: loggedUser.username),
+            ),
           ),
         );
       } else {
@@ -210,7 +216,10 @@ class _LoginPageState extends State<LoginPage> {
             prefs.getString('usuario_grade') ??
             '2º Ano Fundamental';
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => MateriasPage(ano: ano)),
+          MaterialPageRoute(
+            builder: (context) =>
+                ConfirmExitScope(child: MateriasPage(ano: ano)),
+          ),
         );
       }
     } else {

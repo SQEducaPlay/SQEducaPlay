@@ -9,6 +9,7 @@ import 'utils/logger.dart';
 import 'widgets/app_bar.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'config/privacy_policy_config.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -31,7 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
   bool _guardianConsent = false;
-  static const _consentVersion = '2026-08-15';
+  static const _consentVersion = PrivacyPolicyConfig.version;
 
   final List<String> _series = ['2º Ano', '3º Ano', '4º Ano', '5º Ano'];
   String? _selectedSerie;
@@ -49,16 +50,37 @@ class _RegisterPageState extends State<RegisterPage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Termo de privacidade'),
+        title: const Text('Aviso de privacidade e consentimento'),
         content: const SingleChildScrollView(
-          child: Text(
-            'O SQEducaPlay usa os dados informados para criar a conta, '
-            'organizar escola, série e turma e registrar o progresso nas '
-            'atividades. A foto é opcional e pode ser removida do perfil. '
-            'Essas informações devem ser fornecidas com autorização do '
-            'responsável pelo aluno. O responsável pode solicitar a revisão '
-            'ou exclusão dos dados pelos canais oficiais da escola.',
-            style: TextStyle(height: 1.4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Versão ${PrivacyPolicyConfig.version}'),
+              SizedBox(height: 12),
+              Text(
+                'Para criar e usar a conta, o aplicativo trata nome, apelido '
+                '(se informado), usuário, senha protegida por hash para '
+                'autenticação, nome do responsável, escola, série, turma, '
+                'progresso e respostas das atividades. Se a opção Salvar '
+                'acesso for marcada, a senha também fica armazenada localmente '
+                'para preenchimento automático e pode ser removida '
+                'desmarcando essa opção. A foto de perfil é opcional e pode '
+                'ser escolhida na galeria ou capturada pela câmera; ela pode '
+                'ser removida no perfil. No modo local, os dados ficam neste dispositivo. '
+                'Na versão web demonstrativa, o armazenamento é temporário '
+                'neste navegador e pode ser perdido ao recarregar ou fechar a página.',
+                style: TextStyle(height: 1.4),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Esta é uma versão piloto. Use somente dados fictícios até '
+                'que a instituição responsável aprove formalmente o uso, '
+                'defina os canais para exercer direitos e informe os prazos '
+                'de retenção. O cadastro de conta e o consentimento para '
+                'fotografias da oficina são autorizações distintas.',
+                style: TextStyle(height: 1.4),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -409,7 +431,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   onChanged: (value) => setState(() => _guardianConsent = value ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
                   title: const Text(
-                    'Declaro que sou responsável e autorizo o uso dos dados do aluno para fins educacionais.',
+                    'Li o aviso de privacidade (versão ${PrivacyPolicyConfig.version}) e, como responsável, concordo com o tratamento descrito para este piloto.',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),

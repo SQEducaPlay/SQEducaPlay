@@ -153,7 +153,10 @@ Os conteúdos são organizados por ano escolar e alinhados a critérios pedagóg
 - [Índice da documentação](docs/README.md)
 - [Documentação técnica](DOCUMENTACAO_TECNICA.md): arquitetura, estrutura e decisões do software.
 - [Guia de contribuição](CONTRIBUTING.md): branches, commits, testes e revisão.
-- [Rascunho do Plano de Ação Extensionista](docs/plano-de-acao-p1.md): roteiro e indicadores propostos para a oficina; depende de confirmação dos dados da escola parceira.
+- [Plano de Ação Extensionista](docs/plano-de-acao-p1.md): preparação da oficina e indicadores; depende de confirmação dos dados da escola parceira.
+- [Kit de oficina e evidências](docs/oficina/kit-de-evidencias.md): roteiro, checklist de dois aparelhos offline e ficha agregada pré/pós.
+- [Informação ao responsável — rascunho](docs/oficina/termo-responsavel-piloto.md): requer revisão institucional e substituição pelo modelo oficial do AVA antes do uso.
+- [Modelo de relatório pós-oficina](docs/oficina/relatorio-pos-oficina.md): preencher após a atividade, com dados agregados.
 
 ## Status do projeto
 

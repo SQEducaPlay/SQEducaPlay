@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../config/privacy_policy_config.dart';
 import '../widgets/app_bar.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
 
-  static const policyVersion = '2026-08-25-pilot';
+  static const policyVersion = PrivacyPolicyConfig.version;
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +42,13 @@ class PrivacyPolicyPage extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
-                'Identificador de acesso, nome de exibicao, escola, turma, ano escolar, '
-                'respostas, pontuacao, progresso e registros tecnicos de seguranca. O app '
-                'nao solicita foto, camera, localizacao, contatos nem publicidade.',
+                'Nome, apelido opcional, identificador de acesso, senha protegida por hash '
+                'para autenticacao, nome do responsavel, escola, turma, ano escolar, respostas, '
+                'pontuacao, progresso e registros tecnicos de seguranca. Se a opcao Salvar acesso '
+                'for marcada, a senha tambem fica armazenada localmente para preenchimento '
+                'automatico e pode ser removida desmarcando essa opcao. A foto de perfil e '
+                'opcional e pode ser selecionada na galeria ou capturada pela camera. O app nao '
+                'solicita localizacao nem contatos.',
               ),
               SizedBox(height: 20),
               Text(
@@ -60,9 +65,12 @@ class PrivacyPolicyPage extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
-                'O acesso escolar usa separacao por organizacao, escola, turma e perfil. '
-                'Dados nao devem ser vendidos nem usados para anuncios. Prestadores de '
-                'infraestrutura so podem tratar o necessario para operar o servico.',
+                'No modo local, os dados ficam no armazenamento do dispositivo. Na web, '
+                'o fallback demonstrativo mantem dados temporariamente em memoria no navegador; '
+                'eles podem ser perdidos ao recarregar ou fechar a pagina e nao sao sincronizados '
+                'entre aparelhos. Uma configuracao de backend pode alterar esse fluxo e exige '
+                'avaliacao propria antes de uso institucional. Dados nao devem ser vendidos nem '
+                'usados para anuncios.',
               ),
               SizedBox(height: 20),
               Text(
@@ -72,8 +80,8 @@ class PrivacyPolicyPage extends StatelessWidget {
               Text(
                 'Na tela Privacidade, o titular ou responsavel pode copiar os dados locais '
                 'e solicitar a exclusao da conta. Correcao, oposicao, retirada de consentimento '
-                'e atendimento institucional dependem do canal oficial que deve ser informado '
-                'antes de qualquer uso real.',
+                'e atendimento institucional dependem de canais que ainda devem ser formalmente '
+                'definidos antes de qualquer uso real.',
               ),
               SizedBox(height: 20),
               Text(

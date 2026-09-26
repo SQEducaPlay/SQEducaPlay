@@ -193,33 +193,37 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                         child: FadeTransition(
                           opacity: _studentOpacity,
                           child: _AccessCard(
-                            title: onlineBackendConfigured
-                                ? 'Aluno (modo local)'
-                                : 'Sou Aluno',
+                            title: 'Sou Aluno',
                             subtitle: onlineBackendConfigured
-                                ? 'Contas antigas deste aparelho; nao sincronizam com a nuvem'
+                                ? 'Acesse seu perfil pela conta do responsavel em qualquer aparelho'
                                 : 'Entrar para estudar ou criar conta de aluno',
                             color: const Color(0xFF2B7CD3),
                             icon: Icons.school,
                             primaryLabel: onlineBackendConfigured
-                                ? 'Entrar neste aparelho'
+                                ? 'Acessar perfil online'
                                 : 'Entrar como aluno',
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const LoginPage(
-                                    audience: LoginAudience.student,
-                                  ),
+                                  builder: (_) => onlineBackendConfigured
+                                      ? const GuardianAccessPage()
+                                      : const LoginPage(
+                                          audience: LoginAudience.student,
+                                        ),
                                 ),
                               );
                             },
                             secondaryLabel: onlineBackendConfigured
-                                ? 'Criar conta local'
+                                ? 'Criar conta da familia'
                                 : 'Cadastrar aluno',
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const RegisterPage(),
+                                  builder: (_) => onlineBackendConfigured
+                                      ? const GuardianAccessPage(
+                                          startWithSignUp: true,
+                                        )
+                                      : const RegisterPage(),
                                 ),
                               );
                             },
@@ -233,7 +237,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           opacity: _teacherOpacity,
                           child: _AccessCard(
                             title: onlineBackendConfigured
-                                ? 'Educador (online)'
+                                ? 'Educador'
                                 : 'Sou Educador',
                             subtitle: onlineBackendConfigured
                                 ? 'Acesso institucional com convite individual da escola'

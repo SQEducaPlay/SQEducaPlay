@@ -235,9 +235,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                         child: FadeTransition(
                           opacity: _teacherOpacity,
                           child: _AccessCard(
-                            title: onlineBackendConfigured
-                                ? 'Educador'
-                                : 'Sou Educador',
+                            title: 'Sou Educador',
                             subtitle: onlineBackendConfigured
                                 ? 'Acesso institucional com convite individual da escola'
                                 : 'Acesse o painel da sua turma',

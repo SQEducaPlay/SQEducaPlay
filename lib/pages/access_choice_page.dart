@@ -8,6 +8,7 @@ import '../services/backend_service.dart';
 import 'teacher_setup_page.dart';
 import 'guardian_access_page.dart';
 import 'institutional_access_page.dart';
+import 'student_access_page.dart';
 
 class AccessChoicePage extends StatefulWidget {
   final bool skipRememberedAudience;
@@ -197,32 +198,28 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           child: _AccessCard(
                             title: 'Sou Aluno',
                             subtitle: onlineBackendConfigured
-                                ? 'Acesse seu perfil pela conta do responsavel'
+                                ? 'Entre ou crie sua propria conta de aluno'
                                 : 'Entrar para estudar ou criar conta de aluno',
                             color: const Color(0xFF2B7CD3),
                             icon: Icons.school,
-                            primaryLabel: onlineBackendConfigured
-                                ? 'Acessar perfil'
-                                : 'Entrar como aluno',
+                            primaryLabel: 'Entrar como aluno',
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => onlineBackendConfigured
-                                      ? const GuardianAccessPage()
+                                      ? const StudentAccessPage()
                                       : const LoginPage(
                                           audience: LoginAudience.student,
                                         ),
                                 ),
                               );
                             },
-                            secondaryLabel: onlineBackendConfigured
-                                ? 'Criar conta da familia'
-                                : 'Cadastrar aluno',
+                            secondaryLabel: 'Cadastrar aluno',
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => onlineBackendConfigured
-                                      ? const GuardianAccessPage(
+                                      ? const StudentAccessPage(
                                           startWithSignUp: true,
                                         )
                                       : const RegisterPage(),

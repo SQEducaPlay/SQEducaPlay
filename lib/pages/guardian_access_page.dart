@@ -38,6 +38,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   final _childNameController = TextEditingController();
   final _childUsernameController = TextEditingController();
   final _childNicknameController = TextEditingController();
+  final _linkCodeController = TextEditingController();
   final _secureStorage = const FlutterSecureStorage();
 
   late bool _createAccount;
@@ -51,7 +52,11 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   String? _selectedGrade;
   List<Map<String, dynamic>> _children = [];
   List<Map<String, dynamic>> _schools = [];
+  List<Map<String, dynamic>> _linkedStudents = [];
   String? _selectedSchoolId;
+  bool _linkingCode = false;
+  String? _linkError;
+  String? _linkInfo;
 
   static const _grades = [
     '2º Ano Fundamental',
@@ -80,6 +85,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     _childNameController.dispose();
     _childUsernameController.dispose();
     _childNicknameController.dispose();
+    _linkCodeController.dispose();
     super.dispose();
   }
 
@@ -311,12 +317,14 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
 
       final children = await RemoteSyncService.listChildren();
       final schools = await RemoteSyncService.listActiveSchools();
+      final linkedStudents = await RemoteSyncService.listLinkedStudents();
       if (!mounted) return;
       setState(() {
         _guardianRole = role;
         _guardianFullName = profile['full_name'] as String? ?? '';
         _children = children;
         _schools = schools;
+        _linkedStudents = linkedStudents;
         _busy = false;
         _createAccount = false;
       });
@@ -457,6 +465,38 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
         _error =
             'Nao foi possivel sincronizar. Confira a conexao e tente novamente.';
         _busy = false;
+      });
+    }
+  }
+
+  Future<void> _linkStudentByCode() async {
+    final code = _linkCodeController.text.trim();
+    if (code.isEmpty) {
+      setState(() => _linkError = 'Informe o codigo do aluno.');
+      return;
+    }
+    setState(() {
+      _linkingCode = true;
+      _linkError = null;
+      _linkInfo = null;
+    });
+    try {
+      final linked = await RemoteSyncService.linkStudentByCode(code);
+      final linkedStudents = await RemoteSyncService.listLinkedStudents();
+      if (!mounted) return;
+      _linkCodeController.clear();
+      setState(() {
+        _linkedStudents = linkedStudents;
+        _linkingCode = false;
+        _linkInfo =
+            'Aluno "${linked['full_name'] ?? linked['nickname'] ?? ''}" vinculado com sucesso.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _linkingCode = false;
+        _linkError =
+            'Codigo invalido ou nao encontrado. Confira e tente novamente.';
       });
     }
   }
@@ -760,6 +800,70 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       }),
       const Divider(height: 28),
     ],
+    const Text(
+      'Acompanhar aluno com conta propria',
+      style: TextStyle(fontWeight: FontWeight.bold),
+    ),
+    const SizedBox(height: 4),
+    const Text(
+      'Se o aluno ja criou a propria conta, peca o codigo dele e vincule '
+      'aqui para acompanhar o progresso (sem acesso a senha ou conta).',
+      style: TextStyle(fontSize: 12, color: Colors.black54),
+    ),
+    if (_linkError != null) ...[
+      const SizedBox(height: 6),
+      Text(_linkError!, style: const TextStyle(color: Colors.red)),
+    ],
+    if (_linkInfo != null) ...[
+      const SizedBox(height: 6),
+      Text(_linkInfo!, style: const TextStyle(color: Colors.green)),
+    ],
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _linkCodeController,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(labelText: 'Codigo do aluno'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: ElevatedButton(
+            onPressed: _linkingCode ? null : _linkStudentByCode,
+            child: _linkingCode
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Vincular'),
+          ),
+        ),
+      ],
+    ),
+    if (_linkedStudents.isNotEmpty) ...[
+      const SizedBox(height: 8),
+      ..._linkedStudents.map((student) {
+        final schoolName = student['school_name'] as String?;
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.visibility),
+            title: Text(student['full_name'] as String? ?? 'Aluno'),
+            subtitle: Text(
+              [
+                if (student['grade'] != null) '${student['grade']}',
+                ?schoolName,
+                'status: ${student['status'] ?? 'active'}',
+              ].join(' • '),
+            ),
+          ),
+        );
+      }),
+    ],
+    const Divider(height: 28),
     if (_guardianRole == 'admin')
       OutlinedButton.icon(
         onPressed: _busy ? null : _openAdmin,

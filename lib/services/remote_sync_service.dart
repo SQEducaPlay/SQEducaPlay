@@ -44,6 +44,60 @@ abstract final class RemoteSyncService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// Cria o perfil de aluno vinculado a conta de aluno autenticada (sem
+  /// depender de um responsavel). Retorna o id do perfil e o codigo que o
+  /// aluno pode compartilhar depois para um responsavel acompanhar o
+  /// progresso.
+  static Future<({String studentId, String studentCode})>
+  createSelfStudentProfile({
+    required String fullName,
+    required String grade,
+    String? schoolId,
+  }) async {
+    final rows = await _client.rpc(
+      'create_self_student_profile',
+      params: {
+        'p_full_name': fullName,
+        'p_grade': grade,
+        'p_school_id': schoolId,
+      },
+    );
+    final row = Map<String, dynamic>.from((rows as List).first as Map);
+    return (
+      studentId: row['student_id'] as String,
+      studentCode: row['student_code'] as String,
+    );
+  }
+
+  /// Busca o perfil de aluno da conta de aluno atualmente autenticada.
+  static Future<Map<String, dynamic>?> fetchOwnStudentProfile() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    final row = await _client
+        .from('student_profiles')
+        .select('id, username, full_name, nickname, grade, status, student_code')
+        .eq('owner_user_id', userId)
+        .maybeSingle();
+    return row == null ? null : Map<String, dynamic>.from(row);
+  }
+
+  /// Vincula (somente leitura) a conta de responsavel autenticada a um
+  /// aluno com conta propria, usando o codigo compartilhado pelo aluno.
+  static Future<Map<String, dynamic>> linkStudentByCode(String code) async {
+    final rows = await _client.rpc(
+      'link_guardian_to_student',
+      params: {'p_student_code': code},
+    );
+    return Map<String, dynamic>.from((rows as List).first as Map);
+  }
+
+  /// Lista os alunos com conta propria vinculados (visualizacao) a conta
+  /// de responsavel autenticada.
+  static Future<List<Map<String, dynamic>>> listLinkedStudents() async {
+    final rows = await _client.rpc('list_linked_students');
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
   static Future<String> createStudent({
     required String username,
     required String fullName,

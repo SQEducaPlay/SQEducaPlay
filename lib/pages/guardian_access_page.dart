@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
@@ -26,17 +28,24 @@ class GuardianAccessPage extends StatefulWidget {
 }
 
 class _GuardianAccessPageState extends State<GuardianAccessPage> {
+  static const _supportEmail = 'suportesqeducaplay@gmail.com';
+  static const _savedEmailKey = 'guardian_saved_email';
+  static const _savedPasswordKey = 'guardian_saved_password';
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _guardianNameController = TextEditingController();
   final _childNameController = TextEditingController();
   final _childUsernameController = TextEditingController();
   final _childNicknameController = TextEditingController();
+  final _secureStorage = const FlutterSecureStorage();
 
   late bool _createAccount;
   bool _busy = false;
   bool _consentAccepted = false;
+  bool _saveCredentials = true;
   String? _error;
+  String? _info;
   String? _guardianRole;
   String? _guardianFullName;
   String? _selectedGrade;
@@ -58,6 +67,8 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     if (BackendService.instance.isInitialized &&
         BackendService.instance.client.auth.currentSession != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadAccount());
+    } else if (!_createAccount) {
+      _loadSavedCredentials();
     }
   }
 
@@ -70,6 +81,127 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     _childUsernameController.dispose();
     _childNicknameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    String? savedEmail;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      savedEmail = prefs.getString(_savedEmailKey);
+    } catch (_) {
+      // Preferencias indisponiveis (ex.: ambiente de teste); segue sem prefill.
+      return;
+    }
+    String? savedPassword;
+    try {
+      savedPassword = await _secureStorage.read(key: _savedPasswordKey);
+    } catch (_) {
+      // Armazenamento seguro indisponivel; segue sem preencher a senha.
+    }
+    if (!mounted) return;
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      _emailController.text = savedEmail;
+    }
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _passwordController.text = savedPassword;
+    } else {
+      setState(() => _saveCredentials = false);
+    }
+  }
+
+  Future<void> _persistCredentials(String email, String password) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_saveCredentials) {
+        await prefs.setString(_savedEmailKey, email);
+      } else {
+        await prefs.remove(_savedEmailKey);
+      }
+    } catch (_) {
+      // Preferencias indisponiveis; a lembranca de e-mail sera ignorada.
+    }
+    if (_saveCredentials) {
+      try {
+        await _secureStorage.write(key: _savedPasswordKey, value: password);
+      } catch (_) {
+        // Sem suporte a armazenamento seguro; a senha nao sera lembrada.
+      }
+    } else {
+      try {
+        await _secureStorage.delete(key: _savedPasswordKey);
+      } catch (_) {
+        // Nada a remover se o armazenamento seguro nao estiver disponivel.
+      }
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    if (!BackendService.instance.isInitialized) {
+      setState(
+        () => _error =
+            'O acesso online ainda nao esta configurado nesta versao do aplicativo.',
+      );
+      return;
+    }
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(
+        () => _error = 'Informe o e-mail da conta para redefinir a senha.',
+      );
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    try {
+      await BackendService.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: kIsWeb ? Uri.base.toString() : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _info =
+            'Se houver conta com esse e-mail, enviamos um link para redefinir a senha.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'Nao foi possivel enviar o e-mail agora. Tente novamente.';
+      });
+    }
+  }
+
+  Future<void> _showSupportDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajuda e suporte'),
+        content: const SelectableText(
+          'Duvidas, problemas de acesso ou solicitacoes sobre a conta: '
+          '$_supportEmail',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(const ClipboardData(text: _supportEmail));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('E-mail copiado.')));
+            },
+            child: const Text('Copiar e-mail'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _authenticate() async {
@@ -98,6 +230,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       final auth = BackendService.instance.client.auth;
@@ -119,6 +252,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       } else {
         await auth.signInWithPassword(email: email, password: password);
       }
+      await _persistCredentials(email, password);
       await _loadAccount();
     } on AuthException catch (error) {
       setState(() {
@@ -479,7 +613,16 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   Widget build(BuildContext context) {
     return ConfirmExitScope(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Acesso do responsavel')),
+        appBar: AppBar(
+          title: const Text('Acesso do responsavel'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'Ajuda e suporte',
+              onPressed: _showSupportDialog,
+            ),
+          ],
+        ),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
@@ -498,17 +641,25 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                if (_guardianRole == null) ..._buildAuthForm(),
-                if (_guardianRole == 'guardian' || _guardianRole == 'admin')
-                  ..._buildFamilyProfiles(),
                 if (_error != null) ...[
-                  const SizedBox(height: 12),
                   Text(
                     _error!,
                     style: const TextStyle(color: Colors.red),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 8),
                 ],
+                if (_info != null) ...[
+                  Text(
+                    _info!,
+                    style: const TextStyle(color: Colors.green),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (_guardianRole == null) ..._buildAuthForm(),
+                if (_guardianRole == 'guardian' || _guardianRole == 'admin')
+                  ..._buildFamilyProfiles(),
                 if (_busy) ...[
                   const SizedBox(height: 18),
                   const Center(child: CircularProgressIndicator()),
@@ -542,17 +693,34 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       ),
       onSubmitted: (_) => _busy ? null : _authenticate(),
     ),
+    CheckboxListTile(
+      contentPadding: EdgeInsets.zero,
+      value: _saveCredentials,
+      onChanged: _busy
+          ? null
+          : (value) => setState(() => _saveCredentials = value ?? false),
+      title: const Text(
+        'Salvar senha neste aparelho',
+        style: TextStyle(fontSize: 14),
+      ),
+    ),
     const SizedBox(height: 16),
     ElevatedButton(
       onPressed: _busy ? null : _authenticate,
       child: Text(_createAccount ? 'Criar conta' : 'Entrar'),
     ),
+    if (!_createAccount)
+      TextButton(
+        onPressed: _busy ? null : _forgotPassword,
+        child: const Text('Esqueci a senha'),
+      ),
     TextButton(
       onPressed: _busy
           ? null
           : () => setState(() {
               _createAccount = !_createAccount;
               _error = null;
+              _info = null;
             }),
       child: Text(
         _createAccount

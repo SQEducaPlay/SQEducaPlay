@@ -145,7 +145,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             children: [
                               Image.asset(
                                 'assets/images/mascoteTransparente.png',
-                                height: 200,
+                                height: 350,
                                 semanticLabel: 'Mascote do SQEducaPlay',
                               ),
                               const SizedBox(height: 8),

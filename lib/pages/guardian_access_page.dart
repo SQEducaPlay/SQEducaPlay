@@ -728,13 +728,6 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
             : 'Novo por aqui? Criar conta do responsavel',
       ),
     ),
-    const SizedBox(height: 10),
-    const Text(
-      'Para testar, use perfis sem informacoes identificaveis de criancas. '
-      'A senha da conta fica no servico seguro de autenticacao; o app nao a guarda localmente.',
-      textAlign: TextAlign.center,
-      style: TextStyle(fontSize: 12),
-    ),
   ];
 
   List<Widget> _buildFamilyProfiles() => [

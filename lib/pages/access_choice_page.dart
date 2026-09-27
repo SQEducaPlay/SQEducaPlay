@@ -108,15 +108,12 @@ class _AccessChoicePageState extends State<AccessChoicePage>
       body: Stack(
         children: [
           Positioned.fill(
-            child: Container(
-              color: const Color(0xFF5DDCFD),
-              child: Image.asset(
-                kIsWeb
-                    ? 'assets/images/fundo_azul_web.png'
-                    : 'assets/images/fundo_azul_app.png',
-                fit: BoxFit.contain,
-                excludeFromSemantics: true,
-              ),
+            child: Image.asset(
+              kIsWeb
+                  ? 'assets/images/fundo_azul_web.png'
+                  : 'assets/images/fundo_azul_app.png',
+              fit: BoxFit.cover,
+              excludeFromSemantics: true,
             ),
           ),
           Positioned(

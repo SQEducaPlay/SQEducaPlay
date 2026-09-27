@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -108,7 +109,9 @@ class _AccessChoicePageState extends State<AccessChoicePage>
         children: [
           Positioned.fill(
             child: Image.asset(
-              'assets/images/fundo_azul.jpg',
+              kIsWeb
+                  ? 'assets/images/fundo_azul_web.png'
+                  : 'assets/images/fundo_azul_app.png',
               fit: BoxFit.cover,
               excludeFromSemantics: true,
             ),

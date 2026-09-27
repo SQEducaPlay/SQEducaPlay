@@ -36,12 +36,11 @@ abstract final class RemoteSyncService {
   }
 
   static Future<List<Map<String, dynamic>>> listActiveSchools() async {
-    final rows = await _client
-        .from('schools')
-        .select('id, name')
-        .eq('active', true)
-        .order('name');
-    return List<Map<String, dynamic>>.from(rows);
+    // Uses a security-definer RPC (instead of selecting the table
+    // directly) so the school picker also works before the user is
+    // authenticated, e.g. on the student sign-up screen.
+    final rows = await _client.rpc('list_public_schools');
+    return List<Map<String, dynamic>>.from(rows as List);
   }
 
   /// Cria o perfil de aluno vinculado a conta de aluno autenticada (sem
@@ -75,7 +74,9 @@ abstract final class RemoteSyncService {
     if (userId == null) return null;
     final row = await _client
         .from('student_profiles')
-        .select('id, username, full_name, nickname, grade, status, student_code')
+        .select(
+          'id, username, full_name, nickname, grade, status, student_code',
+        )
         .eq('owner_user_id', userId)
         .maybeSingle();
     return row == null ? null : Map<String, dynamic>.from(row);

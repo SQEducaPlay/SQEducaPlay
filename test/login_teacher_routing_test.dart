@@ -59,7 +59,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
-    expect(find.text('Deseja realmente sair do aplicativo?'), findsOneWidget);
+    expect(find.text('Deseja sair da conta e voltar ao inicio?'), findsOneWidget);
     await tester.tap(find.text('Continuar no app'));
     await tester.pumpAndSettle();
     expect(find.byType(ProfessorDashboardPage), findsOneWidget);

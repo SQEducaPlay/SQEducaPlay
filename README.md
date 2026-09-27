@@ -43,6 +43,8 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - gestão de escolas, professores, alunos e convites;
 - persistência local de dados com SQLite;
 - funcionamento offline em parte do fluxo principal;
+- acesso online com conta de responsável, perfis familiares, pedidos de matrícula e sincronização de quizzes;
+- acesso institucional com convites individuais, cadastro de escolas/turmas e aprovação de matrícula;
 - suporte a web e mobile com interface responsiva.
 
 ## Tecnologias
@@ -52,6 +54,7 @@ O projeto foi estruturado para funcionar como uma base educativa e institucional
 - SQLite
 - Material Design
 - GitHub para versionamento
+- Supabase (autenticação e sincronização online experimental)
 
 ## Estrutura do projeto
 
@@ -121,23 +124,25 @@ Cada push em `main` gera a versão web e o APK Android. Para baixar a versão ma
 
 > O APK gerado pelo workflow é destinado a testes e distribuição direta.
 
-## Acesso do aluno
+O acesso de responsável e o institucional usam Supabase; o SQLite permanece
+como armazenamento offline e fila de sincronização. Históricos locais antigos
+só são importados após autorização explícita do responsável. A implantação
+institucional e o aviso de privacidade ainda precisam de revisão antes de
+qualquer uso com dados reais de crianças.
 
-Para acessar o app como aluno:
+## Acesso de responsável e aluno
 
-1. abra o aplicativo;
-2. selecione a opção de aluno;
-3. faça cadastro ou login com a conta do estudante;
-4. acompanhe o progresso, responda os quizzes e consulte o perfil.
+O responsável entra com e-mail, cria perfis familiares e pode solicitar
+matrícula em uma escola. O perfil escolar só fica disponível após a escola
+aprovar e matricular o estudante em uma turma. Quizzes de perfis online são
+sincronizados entre aparelhos.
 
-## Acesso do professor
+## Acesso do educador
 
-Para acessar o app como professor:
-
-1. abra o aplicativo;
-2. selecione a opção de professor;
-3. faça login com a conta do professor;
-4. utilize o painel para gerenciar turmas, alunos e convites de acesso.
+O educador usa uma conta de e-mail e convite individual, emitido por um
+administrador da escola. O painel mostra apenas as turmas e os perfis
+autorizados daquela escola. Veja [o guia do Supabase](docs/supabase-setup.md)
+para configurar escola, turmas e convites.
 
 ## Conteúdo pedagógico
 

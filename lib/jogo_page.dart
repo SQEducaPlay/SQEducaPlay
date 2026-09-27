@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/background_audio_service.dart';
 import 'services/user_service.dart';
 import 'services/quiz_scoring_service.dart';
+import 'services/remote_sync_service.dart';
 
 // Widget para desenhar formas geométricas
 class ShapeWidget extends StatelessWidget {
@@ -2021,6 +2022,7 @@ class JogoPageState extends State<JogoPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       final usuarioId = prefs.getInt('usuario_id');
+      final currentUser = UserService().currentUser;
 
       if (usuarioId == null) {
         debugPrint('Nenhum usuário logado, partida não será salva');
@@ -2046,6 +2048,11 @@ class JogoPageState extends State<JogoPage>
         'total_perguntas': perguntas.length,
         'tempo_segundos': null,
         'data_partida': DateTime.now().toIso8601String(),
+        if (currentUser?.remoteStudentId != null) ...{
+          'remote_student_id': currentUser!.remoteStudentId,
+          'client_session_id': RemoteSyncService.createClientSessionId(),
+          'remote_synced': 0,
+        },
       });
 
       // Seção 5.6: salvar tentativas por questão para diagnóstico do professor.
@@ -2072,6 +2079,34 @@ class JogoPageState extends State<JogoPage>
           topico: widget.topico,
           tentativas: tentativas,
         );
+      }
+
+      if (currentUser?.remoteStudentId != null) {
+        try {
+          await RemoteSyncService.syncPendingSessions(
+            currentUser!.remoteStudentId!,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Progresso sincronizado com a conta da familia.'),
+              ),
+            );
+          }
+        } catch (error) {
+          debugPrint(
+            'Partida mantida localmente; sincronizacao pendente: $error',
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Partida salva neste aparelho. A sincronizacao sera tentada novamente ao entrar.',
+                ),
+              ),
+            );
+          }
+        }
       }
 
       final username = UserService().currentUser?.username;

@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend_service.dart';
+import 'progresso_service.dart';
 import 'user_service.dart';
 
 /// Mantem o encerramento de sessao em uma unica fronteira.
@@ -22,6 +23,7 @@ abstract final class SessionService {
     }
 
     UserService().clearCurrentUser();
+    ProgressoService().setRemoteStudentScope(null);
     final preferences = await SharedPreferences.getInstance();
     for (final key in _identityKeys) {
       await preferences.remove(key);

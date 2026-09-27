@@ -66,11 +66,13 @@ class PrivacyPolicyPage extends StatelessWidget {
               ),
               Text(
                 'No modo local, os dados ficam no armazenamento do dispositivo. Na web, '
-                'o fallback demonstrativo mantem dados temporariamente em memoria no navegador; '
-                'eles podem ser perdidos ao recarregar ou fechar a pagina e nao sao sincronizados '
-                'entre aparelhos. Uma configuracao de backend pode alterar esse fluxo e exige '
-                'avaliacao propria antes de uso institucional. Dados nao devem ser vendidos nem '
-                'usados para anuncios.',
+                'o modo local demonstrativo mantem dados temporariamente em memoria no navegador. '
+                'Quando o acesso online estiver habilitado, o e-mail do responsavel, os perfis '
+                'familiares e os registros de quizzes podem ser enviados ao Supabase para permitir '
+                'sincronizacao entre aparelhos. O acesso aos registros e limitado por autenticacao '
+                'e politicas no banco; a conexao usa HTTPS e o provedor aplica criptografia de '
+                'infraestrutura. Isso nao e criptografia ponta a ponta: o operador do projeto pode '
+                'administrar o banco. Dados nao devem ser vendidos nem usados para anuncios.',
               ),
               SizedBox(height: 20),
               Text(
@@ -89,9 +91,10 @@ class PrivacyPolicyPage extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
-                'Antes da publicacao, o responsavel pelo projeto deve informar aqui e na URL '
-                'publica: controlador, encarregado/canal LGPD, bases legais, prazos de retencao, '
-                'operadores, processo de incidente e data de vigencia aprovada.',
+                'O acesso online permanece em teste. Nao informe dados identificaveis de menores '
+                'ate que o responsavel pelo projeto aprove e publique: controlador, encarregado/'
+                'canal LGPD, bases legais, prazos de retencao, operadores, processo de incidente '
+                'e data de vigencia. Use perfis de teste sem nomes, fotos ou informacoes reais.',
               ),
             ],
           ),

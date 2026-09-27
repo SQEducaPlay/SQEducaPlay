@@ -9,6 +9,11 @@ class ProgressoService {
 
   final Map<String, ProgressoAluno> _progressos = {};
   final Map<String, Map<TipoConquista, Conquista>> _conquistasPorUsuario = {};
+  String? _remoteStudentScope;
+
+  void setRemoteStudentScope(String? username) {
+    _remoteStudentScope = username;
+  }
 
   Future<void> carregarDoBanco() async {
     _progressos.clear();
@@ -20,8 +25,8 @@ class ProgressoService {
         continue;
       }
 
-      // Mantém `users.pontuacao_total` e `users.estrelas_total` sincronizados
-      // com o histórico real salvo em `partidas`.
+      // MantÃ©m `users.pontuacao_total` e `users.estrelas_total` sincronizados
+      // com o histÃ³rico real salvo em `partidas`.
       try {
         await AppDatabase.instance.recalculateAndPersistUserTotals(usuario.id!);
       } catch (_) {}
@@ -63,8 +68,8 @@ class ProgressoService {
       await _reconstruirConquistas(usuario.username, progresso, partidas, teveQuizRapido: teveQuizRapido);
     }
 
-    // Após reconstruir progresso para todos os usuários, calcula ranking e
-    // verifica conquistas relacionadas a posição no ranking (top10, subir10posicoes).
+    // ApÃ³s reconstruir progresso para todos os usuÃ¡rios, calcula ranking e
+    // verifica conquistas relacionadas a posiÃ§Ã£o no ranking (top10, subir10posicoes).
     final ranking = getRanking();
     for (var i = 0; i < ranking.length; i++) {
       final p = ranking[i];
@@ -86,7 +91,7 @@ class ProgressoService {
               await _desbloquearSeNecessario(p.username, TipoConquista.top3);
             }
 
-            // verifica subida de 10 posições
+            // verifica subida de 10 posiÃ§Ãµes
             if (lastPos != null && (lastPos - currentPos) >= 10) {
               await _desbloquearSeNecessario(p.username, TipoConquista.subir10posicoes);
             }
@@ -97,12 +102,12 @@ class ProgressoService {
               await _desbloquearSeNecessario(p.username, TipoConquista.subir20posicoes);
             }
             if (lastPos != null && (currentPos - lastPos) >= 15) {
-              // caiu e depois recuperou 15 posições (recuperar15posicoes)
+              // caiu e depois recuperou 15 posiÃ§Ãµes (recuperar15posicoes)
               await _desbloquearSeNecessario(p.username, TipoConquista.recuperar15posicoes);
             }
           }
 
-          // salva nova posição
+          // salva nova posiÃ§Ã£o
           await AppDatabase.instance.saveUserRankingPosition(user.id!, currentPos, DateTime.now());
         }
       } catch (_) {}
@@ -162,7 +167,7 @@ class ProgressoService {
     bool teveQuizRapido = false;
 
     for (final partida in partidas) {
-      final materia = partida['materia'] as String? ?? 'Sem matéria';
+      final materia = partida['materia'] as String? ?? 'Sem matÃ©ria';
       final pontos = (partida['pontuacao'] as int?) ?? 0;
       final estrelas = (partida['estrelas'] as int?) ?? 0;
       final acertos = (partida['acertos'] as int?) ?? 0;
@@ -171,7 +176,7 @@ class ProgressoService {
       final dataStr = partida['data_partida'] as String?;
       final data = dataStr != null ? DateTime.tryParse(dataStr) : null;
 
-      // contabiliza quizzes rápidos/ultra
+      // contabiliza quizzes rÃ¡pidos/ultra
       if (tempoSegundos < 120) progresso.quizRapidosTotal++;
       if (tempoSegundos < 60) progresso.ultraRapidosTotal++;
       progresso.pontuacaoTotal += pontos;
@@ -204,7 +209,7 @@ class ProgressoService {
     progresso.ultimoQuizData = ultimaData;
     progresso.quizesHoje = quizHoje;
     progresso.diasConsecutivos = _calcularDiasConsecutivos(partidas, hoje);
-    // calcula perfectsToday e consecutivePerfects a partir do histórico
+    // calcula perfectsToday e consecutivePerfects a partir do histÃ³rico
     int perfectsHoje = 0;
     final partidasComData = partidas
         .map((p) {
@@ -293,7 +298,7 @@ class ProgressoService {
       await _desbloquearSeNecessario(username, TipoConquista.cincoQuizesPerfeitos);
     }
 
-    const materiasAtivas = ['Matemática', 'Português'];
+    const materiasAtivas = ['MatemÃ¡tica', 'PortuguÃªs'];
     final materiasComQuiz = progresso.quizesPorMateria.keys
         .where((materia) => materiasAtivas.contains(materia))
         .toSet()
@@ -311,9 +316,9 @@ class ProgressoService {
 
     progresso.quizesPorMateria.forEach((materia, quantidade) {
       if (quantidade >= 10) {
-        if (materia == 'Matemática') {
+        if (materia == 'MatemÃ¡tica') {
           desbloquearSeNecessario(TipoConquista.especialistaMat);
-        } else if (materia == 'Português') {
+        } else if (materia == 'PortuguÃªs') {
           desbloquearSeNecessario(TipoConquista.especialistaPort);
         }
       }
@@ -353,13 +358,13 @@ class ProgressoService {
     }
 
     // Novas regras de conquistas
-    // Especialistas 20/quizes e 2000 pontos por matéria
-    if ((progresso.quizesPorMateria['Matemática'] ?? 0) >= 20) await _desbloquearSeNecessario(username, TipoConquista.especialista20Mat);
-    if ((progresso.quizesPorMateria['Português'] ?? 0) >= 20) await _desbloquearSeNecessario(username, TipoConquista.especialista20Port);
-    if ((progresso.pontosPorMateria['Matemática'] ?? 0) >= 2000) await _desbloquearSeNecessario(username, TipoConquista.pontos2000Mat);
-    if ((progresso.pontosPorMateria['Português'] ?? 0) >= 2000) await _desbloquearSeNecessario(username, TipoConquista.pontos2000Port);
+    // Especialistas 20/quizes e 2000 pontos por matÃ©ria
+    if ((progresso.quizesPorMateria['MatemÃ¡tica'] ?? 0) >= 20) await _desbloquearSeNecessario(username, TipoConquista.especialista20Mat);
+    if ((progresso.quizesPorMateria['PortuguÃªs'] ?? 0) >= 20) await _desbloquearSeNecessario(username, TipoConquista.especialista20Port);
+    if ((progresso.pontosPorMateria['MatemÃ¡tica'] ?? 0) >= 2000) await _desbloquearSeNecessario(username, TipoConquista.pontos2000Mat);
+    if ((progresso.pontosPorMateria['PortuguÃªs'] ?? 0) >= 2000) await _desbloquearSeNecessario(username, TipoConquista.pontos2000Port);
 
-    // Conquista rara: 100% de acertos e <30s em qualquer partida histórica
+    // Conquista rara: 100% de acertos e <30s em qualquer partida histÃ³rica
     for (final partida in partidas) {
       final totalPerguntas = (partida['total_perguntas'] as int?) ?? 0;
       final acertos = (partida['acertos'] as int?) ?? 0;
@@ -380,21 +385,21 @@ class ProgressoService {
     if (progresso.quizesCompletados >= 10 && progresso.taxaAcertoGeral >= 90) await _desbloquearSeNecessario(username, TipoConquista.accuracy90_10);
     if (progresso.quizesCompletados >= 5 && progresso.taxaAcertoGeral >= 95) await _desbloquearSeNecessario(username, TipoConquista.accuracy95_5);
     if (progresso.quizesCompletados >= 3) {
-      // verifica se existem 3 partidas seguidas no mesmo dia: já contamos quizesHoje, mas maratona3 exige sequencia imediata
+      // verifica se existem 3 partidas seguidas no mesmo dia: jÃ¡ contamos quizesHoje, mas maratona3 exige sequencia imediata
       if (progresso.quizesHoje >= 3) await _desbloquearSeNecessario(username, TipoConquista.maratona3);
     }
     if (progresso.quizesCompletados >= 50) await _desbloquearSeNecessario(username, TipoConquista.cinquentaQuizesTotal);
 
-    // Especialistas 50/quizes por matéria
-    if ((progresso.quizesPorMateria['Matemática'] ?? 0) >= 50) await _desbloquearSeNecessario(username, TipoConquista.especialista50Mat);
-    if ((progresso.quizesPorMateria['Português'] ?? 0) >= 50) await _desbloquearSeNecessario(username, TipoConquista.especialista50Port);
+    // Especialistas 50/quizes por matÃ©ria
+    if ((progresso.quizesPorMateria['MatemÃ¡tica'] ?? 0) >= 50) await _desbloquearSeNecessario(username, TipoConquista.especialista50Mat);
+    if ((progresso.quizesPorMateria['PortuguÃªs'] ?? 0) >= 50) await _desbloquearSeNecessario(username, TipoConquista.especialista50Port);
 
-    // Mestre de precisão: 95%+ em 50+ quizzes
+    // Mestre de precisÃ£o: 95%+ em 50+ quizzes
     if (progresso.quizesCompletados >= 50 && progresso.taxaAcertoGeral >= 95) {
       await _desbloquearSeNecessario(username, TipoConquista.mestrePrecisao);
     }
 
-    // Melhoria contínua: média de pontos por quiz nos últimos 30 dias >= 120% da média do período anterior (30-60 dias)
+    // Melhoria contÃ­nua: mÃ©dia de pontos por quiz nos Ãºltimos 30 dias >= 120% da mÃ©dia do perÃ­odo anterior (30-60 dias)
     try {
       final now = DateTime.now();
       final startLast30 = now.subtract(const Duration(days: 30));
@@ -422,7 +427,7 @@ class ProgressoService {
       }
     } catch (_) {}
 
-    // Flash 10s histórico
+    // Flash 10s histÃ³rico
     for (final p in partidas) {
       final tempoSegundos = (p['tempo_segundos'] as int?) ?? 999999;
       if (tempoSegundos < 10) {
@@ -431,12 +436,12 @@ class ProgressoService {
       }
     }
 
-    // Tripla perfeição e maratona perfeita
+    // Tripla perfeiÃ§Ã£o e maratona perfeita
     if (progresso.consecutivePerfects >= 3) await _desbloquearSeNecessario(username, TipoConquista.triplaPerfeicao);
     if (progresso.perfectsToday >= 5) await _desbloquearSeNecessario(username, TipoConquista.maratonaPerfeita);
 
-    // Explorador de tópicos: exige pelo menos 1 quiz em cada matéria conhecida (ajustável)
-    const knownMaterias = ['Matemática', 'Português', 'Ciências'];
+    // Explorador de tÃ³picos: exige pelo menos 1 quiz em cada matÃ©ria conhecida (ajustÃ¡vel)
+    const knownMaterias = ['MatemÃ¡tica', 'PortuguÃªs', 'CiÃªncias'];
     final temTodas = knownMaterias.every((m) => (progresso.quizesPorMateria[m] ?? 0) > 0);
     if (temTodas) await _desbloquearSeNecessario(username, TipoConquista.exploradorTopicos);
 
@@ -447,7 +452,7 @@ class ProgressoService {
     if (unlocked >= (total / 2).ceil()) await _desbloquearSeNecessario(username, TipoConquista.colecionador50);
     if (unlocked == total) await _desbloquearSeNecessario(username, TipoConquista.completionist);
 
-    // Comeback: tinha atividade >30 dias atrás e agora 3+ quizzes recentes (últimos 7 dias)
+    // Comeback: tinha atividade >30 dias atrÃ¡s e agora 3+ quizzes recentes (Ãºltimos 7 dias)
     try {
       final now = DateTime.now();
       final oldThreshold = now.subtract(const Duration(days: 30));
@@ -470,7 +475,7 @@ class ProgressoService {
     final progresso = getProgresso(username);
     final conquistas = getConquistas(username);
 
-    // Primeira Vitória
+    // Primeira VitÃ³ria
     if (progresso.quizesCompletados >= 1 &&
         !conquistas[TipoConquista.primeiraVitoria]!.desbloqueada) {
       await _desbloquearConquista(username, TipoConquista.primeiraVitoria);
@@ -494,10 +499,10 @@ class ProgressoService {
       await _desbloquearConquista(username, TipoConquista.cincoQuizesPerfeitos);
     }
 
-    // Todas as Matérias (ajustado para considerar somente matérias ativas)
-    // Hoje o app suporta apenas Português e Matemática — desbloqueia quando o
-    // aluno completar quizes em todas as matérias ativas.
-    const List<String> materiasAtivas = ['Matemática', 'Português'];
+    // Todas as MatÃ©rias (ajustado para considerar somente matÃ©rias ativas)
+    // Hoje o app suporta apenas PortuguÃªs e MatemÃ¡tica â€” desbloqueia quando o
+    // aluno completar quizes em todas as matÃ©rias ativas.
+    const List<String> materiasAtivas = ['MatemÃ¡tica', 'PortuguÃªs'];
     final materiasComQuiz = progresso.quizesPorMateria.keys
         .where((m) => materiasAtivas.contains(m))
         .toSet()
@@ -519,12 +524,12 @@ class ProgressoService {
       await _desbloquearConquista(username, TipoConquista.dezQuizes);
     }
 
-    // Especialistas por matéria (considera apenas matérias ativas)
+    // Especialistas por matÃ©ria (considera apenas matÃ©rias ativas)
     progresso.quizesPorMateria.forEach((materia, quantidade) {
       if (quantidade >= 10) {
         TipoConquista? tipo;
-        if (materia == 'Matemática') tipo = TipoConquista.especialistaMat;
-        if (materia == 'Português') tipo = TipoConquista.especialistaPort;
+        if (materia == 'MatemÃ¡tica') tipo = TipoConquista.especialistaMat;
+        if (materia == 'PortuguÃªs') tipo = TipoConquista.especialistaPort;
 
         if (tipo != null && !conquistas[tipo]!.desbloqueada) {
           _desbloquearConquista(username, tipo);
@@ -548,7 +553,7 @@ class ProgressoService {
       await _desbloquearConquista(username, TipoConquista.flash10);
     }
 
-    // Tripla perfeição e maratona perfeita runtime
+    // Tripla perfeiÃ§Ã£o e maratona perfeita runtime
     if (progresso.consecutivePerfects >= 3 && !conquistas[TipoConquista.triplaPerfeicao]!.desbloqueada) {
       await _desbloquearConquista(username, TipoConquista.triplaPerfeicao);
     }
@@ -602,7 +607,7 @@ class ProgressoService {
     final conquistas = getConquistas(username);
     final conquista = conquistas[tipo]!;
     
-    // já desbloqueada?
+    // jÃ¡ desbloqueada?
     if (conquista.desbloqueada) return;
 
     conquistas[tipo] = conquista.copyWith(
@@ -614,7 +619,7 @@ class ProgressoService {
     progresso.desbloquearConquista(tipo.toString());
     progresso.pontuacaoTotal += conquista.pontos;
 
-    // Persiste no banco se possível
+    // Persiste no banco se possÃ­vel
     try {
       final user = await AppDatabase.instance.getUserByUsername(username);
       if (user != null && user.id != null) {
@@ -632,6 +637,7 @@ class ProgressoService {
   List<ProgressoAluno> getRanking() {
     final lista = _progressos.values
         .where((progresso) => progresso.pontuacaoTotal > 0 || progresso.quizesCompletados > 0)
+        .where((progresso) => _remoteStudentScope == null || progresso.username == _remoteStudentScope)
         .toList();
     lista.sort((a, b) {
       final byPoints = b.pontuacaoTotal.compareTo(a.pontuacaoTotal);
@@ -644,11 +650,12 @@ class ProgressoService {
   }
 
   int getPosicaoRanking(String username) {
+    if (_remoteStudentScope != null) return 0;
     final ranking = getRanking();
     return ranking.indexWhere((p) => p.username == username) + 1;
   }
 
-  /// Remove cópias em memória depois que o titular exclui a conta.
+  /// Remove cÃ³pias em memÃ³ria depois que o titular exclui a conta.
   void removeUserData(String username) {
     _progressos.remove(username);
     _conquistasPorUsuario.remove(username);

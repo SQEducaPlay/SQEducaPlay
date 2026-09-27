@@ -108,12 +108,15 @@ class _AccessChoicePageState extends State<AccessChoicePage>
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              kIsWeb
-                  ? 'assets/images/fundo_azul_web.png'
-                  : 'assets/images/fundo_azul_app.png',
-              fit: BoxFit.cover,
-              excludeFromSemantics: true,
+            child: Container(
+              color: const Color(0xFF5DDCFD),
+              child: Image.asset(
+                kIsWeb
+                    ? 'assets/images/fundo_azul_web.png'
+                    : 'assets/images/fundo_azul_app.png',
+                fit: BoxFit.contain,
+                excludeFromSemantics: true,
+              ),
             ),
           ),
           Positioned(
@@ -145,7 +148,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             children: [
                               Image.asset(
                                 'assets/images/mascoteTransparente.png',
-                                height: 350,
+                                height: kIsWeb ? 350 : 200,
                                 semanticLabel: 'Mascote do SQEducaPlay',
                               ),
                               const SizedBox(height: 8),

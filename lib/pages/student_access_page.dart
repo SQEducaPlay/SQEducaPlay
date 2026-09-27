@@ -209,7 +209,7 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
     if (normalized.contains('password')) {
       return 'A senha nao atende aos requisitos da conta.';
     }
-    return 'Nao foi possivel autenticar. Verifique os dados e tente novamente.';
+    return 'Nao foi possivel autenticar ($message).';
   }
 
   Future<void> _authenticate() async {
@@ -281,15 +281,18 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
         _error = _friendlyAuthError(error.message);
         _busy = false;
       });
-    } on PostgrestException {
-      setState(() {
-        _error = 'Esta conta nao e uma conta de aluno, ou o perfil ja existe.';
-        _busy = false;
-      });
-    } catch (_) {
+    } on PostgrestException catch (error) {
       setState(() {
         _error =
-            'Nao foi possivel conectar. Confira a internet e tente novamente.';
+            'Esta conta nao e uma conta de aluno, ou o perfil ja existe. '
+            '(${error.message})';
+        _busy = false;
+      });
+    } catch (error) {
+      setState(() {
+        _error =
+            'Nao foi possivel conectar. Confira a internet e tente novamente. '
+            '($error)';
         _busy = false;
       });
     }

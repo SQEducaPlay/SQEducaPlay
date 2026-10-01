@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/app_database.dart';
 import '../models/user_model.dart';
 import 'backend_service.dart';
+import 'firebase_data_service.dart';
+import 'firebase_service.dart';
 import 'progresso_service.dart';
 import 'session_service.dart';
 import 'user_service.dart';
@@ -15,7 +17,12 @@ import 'user_service.dart';
 /// Fronteira unica para os direitos de acesso/exportacao e exclusao da LGPD.
 abstract final class AccountDataService {
   static Future<String> exportAsJson(User user) async {
-    final remote = await _exportRemoteData();
+    final firebaseUser = FirebaseService.instance.isInitialized
+        ? FirebaseService.instance.auth.currentUser
+        : null;
+    final remote = firebaseUser == null
+        ? await _exportRemoteData()
+        : await FirebaseDataService.exportCurrentAccountData();
     if (user.id == null) {
       final profile = Map<String, dynamic>.from(user.toMap())
         ..remove('password');
@@ -107,10 +114,26 @@ abstract final class AccountDataService {
     };
   }
 
-  static Future<void> deleteAccount(User user) async {
+  static Future<void> deleteAccount(
+    User user, {
+    String? firebasePassword,
+  }) async {
     final backend = BackendService.instance;
     final remoteStudentIds = <String>{};
-    if (backend.isInitialized && backend.client.auth.currentUser != null) {
+    final firebaseUser = FirebaseService.instance.isInitialized
+        ? FirebaseService.instance.auth.currentUser
+        : null;
+    if (firebaseUser != null) {
+      remoteStudentIds.addAll(
+        await FirebaseDataService.listManagedStudentIds(),
+      );
+      final password = firebasePassword;
+      if (password == null || password.isEmpty) {
+        throw ArgumentError('Informe a senha da conta Firebase.');
+      }
+      await FirebaseDataService.deleteCurrentAccount(password: password);
+    } else if (backend.isInitialized &&
+        backend.client.auth.currentUser != null) {
       final authUser = backend.client.auth.currentUser!;
       final children = await backend.client
           .from('student_profiles')

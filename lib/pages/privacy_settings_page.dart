@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../services/account_data_service.dart';
+import '../services/firebase_service.dart';
 import '../services/privacy_settings_service.dart';
 import '../services/user_service.dart';
 import '../widgets/app_bar.dart';
@@ -36,13 +38,17 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cópia dos dados copiada para a área de transferência.'),
+          content: Text(
+            'Cópia dos dados copiada para a área de transferência.',
+          ),
         ),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível gerar a cópia dos dados.')),
+        const SnackBar(
+          content: Text('Não foi possível gerar a cópia dos dados.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -53,6 +59,10 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     final user = UserService().currentUser;
     if (user == null) return;
     final confirmation = TextEditingController();
+    final password = TextEditingController();
+    final requiresFirebasePassword =
+        FirebaseService.instance.isInitialized &&
+        FirebaseService.instance.auth.currentUser != null;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -66,6 +76,13 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
               'Ela não pode ser desfeita. Digite EXCLUIR para confirmar.',
             ),
             const SizedBox(height: 16),
+            if (requiresFirebasePassword)
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Senha da conta'),
+              ),
+            if (requiresFirebasePassword) const SizedBox(height: 12),
             TextField(
               controller: confirmation,
               autocorrect: false,
@@ -81,7 +98,8 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           FilledButton(
             onPressed: () => Navigator.pop(
               dialogContext,
-              confirmation.text.trim().toUpperCase() == 'EXCLUIR',
+              confirmation.text.trim().toUpperCase() == 'EXCLUIR' &&
+                  (!requiresFirebasePassword || password.text.isNotEmpty),
             ),
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             child: const Text('Excluir definitivamente'),
@@ -89,26 +107,38 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
         ],
       ),
     );
+    final enteredPassword = password.text;
     confirmation.dispose();
+    password.dispose();
     if (confirmed != true || !mounted) return;
 
     setState(() => _busy = true);
     try {
-      await AccountDataService.deleteAccount(user);
+      await AccountDataService.deleteAccount(
+        user,
+        firebasePassword: enteredPassword,
+      );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AccessChoicePage()),
         (_) => false,
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'A exclusão não foi concluída. Verifique a conexão e tente novamente.',
-          ),
-        ),
-      );
+      final message = error is firebase_auth.FirebaseAuthException
+          ? switch (error.code) {
+              'wrong-password' ||
+              'invalid-credential' => 'A senha da conta está incorreta.',
+              'requires-recent-login' =>
+                'Entre novamente na conta e repita a exclusão.',
+              _ => 'Não foi possível excluir a conta (${error.code}).',
+            }
+          : error is StateError
+          ? error.message.toString()
+          : 'Não foi possível concluir a exclusão ($error).';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -138,7 +168,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           const Divider(),
           SwitchListTile.adaptive(
             title: const Text('Anonimizar nomes de alunos'),
-            subtitle: const Text('Exibe apelido ou Primeiro nome + inicial do sobrenome'),
+            subtitle: const Text(
+              'Exibe apelido ou Primeiro nome + inicial do sobrenome',
+            ),
             value: privacy.anonymizeStudentNames,
             onChanged: (v) async {
               setState(() => privacy.anonymizeStudentNames = v);
@@ -178,7 +210,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           const Divider(),
           SwitchListTile.adaptive(
             title: const Text('Música de fundo no jogo'),
-            subtitle: const Text('Desative para aulas ou ambientes silenciosos'),
+            subtitle: const Text(
+              'Desative para aulas ou ambientes silenciosos',
+            ),
             value: privacy.enableBackgroundMusic,
             onChanged: (v) async {
               setState(() => privacy.enableBackgroundMusic = v);
@@ -188,7 +222,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           const Divider(),
           SwitchListTile.adaptive(
             title: const Text('Mostrar escola no ranking de alunos'),
-            subtitle: const Text('Desmarque para esconder a escola no ranking público de alunos'),
+            subtitle: const Text(
+              'Desmarque para esconder a escola no ranking público de alunos',
+            ),
             value: privacy.showSchoolInStudentRanking,
             onChanged: (v) async {
               setState(() => privacy.showSchoolInStudentRanking = v);
@@ -198,7 +234,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           const Divider(),
           SwitchListTile.adaptive(
             title: const Text('Aluno ver primeiro a própria escola'),
-            subtitle: const Text('Aplica filtro automático no ranking do aluno'),
+            subtitle: const Text(
+              'Aplica filtro automático no ranking do aluno',
+            ),
             value: privacy.studentDefaultToOwnSchool,
             onChanged: (v) async {
               setState(() => privacy.studentDefaultToOwnSchool = v);
@@ -206,7 +244,10 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             },
           ),
           const SizedBox(height: 24),
-          const Text('Seus dados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Seus dados',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _busy ? null : _exportData,
@@ -217,7 +258,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           OutlinedButton.icon(
             onPressed: _busy ? null : _confirmDelete,
             icon: const Icon(Icons.delete_forever_outlined),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red.shade700,
+            ),
             label: const Text('Excluir minha conta e meus dados'),
           ),
           if (_busy) ...[
@@ -225,7 +268,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             const Center(child: CircularProgressIndicator()),
           ],
           const SizedBox(height: 24),
-          const Text('Dica: você pode ajustar essas preferências a qualquer momento.'),
+          const Text(
+            'Dica: você pode ajustar essas preferências a qualquer momento.',
+          ),
         ],
       ),
     );

@@ -1,0 +1,430 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function hasUser(uid) {
+      return exists(userPath(uid));
+    }
+
+    function roleIs(role) {
+      return signedIn()
+        && hasUser(request.auth.uid)
+        && get(userPath(request.auth.uid)).data.role == role;
+    }
+
+    function isAdmin() {
+      return roleIs('admin');
+    }
+
+    function membershipPath(uid, schoolId) {
+      return /databases/$(database)/documents/memberships/$(uid + '_' + schoolId);
+    }
+
+    function isSchoolMember(schoolId) {
+      return signedIn()
+        && exists(membershipPath(request.auth.uid, schoolId))
+        && get(membershipPath(request.auth.uid, schoolId)).data.status == 'active';
+    }
+
+    function hasSchoolRole(schoolId, allowedRoles) {
+      return isAdmin()
+        || (isSchoolMember(schoolId)
+          && get(membershipPath(request.auth.uid, schoolId)).data.role in allowedRoles);
+    }
+
+    function studentPath(studentId) {
+      return /databases/$(database)/documents/students/$(studentId);
+    }
+
+    function linkPath(guardianId, studentId) {
+      return /databases/$(database)/documents/studentLinks/$(guardianId + '_' + studentId);
+    }
+
+    function canReadStudent(studentId) {
+      let student = get(studentPath(studentId)).data;
+      return signedIn()
+        && (isAdmin()
+          || student.ownerUid == request.auth.uid
+          || student.guardianId == request.auth.uid
+          || exists(linkPath(request.auth.uid, studentId))
+          || (student.schoolId != null && isSchoolMember(student.schoolId)));
+    }
+
+    function canWriteStudent(studentId) {
+      let student = get(studentPath(studentId)).data;
+      return signedIn()
+        && (student.ownerUid == request.auth.uid
+          || student.guardianId == request.auth.uid);
+    }
+
+    function validProfileCreate(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'fullName', 'role', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.role in ['guardian', 'student']
+        && request.resource.data.createdAt == request.time;
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if validProfileCreate(uid);
+      allow update: if signedIn()
+        && (
+          (request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['fullName', 'updatedAt'])
+            && request.resource.data.updatedAt == request.time)
+          || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['role', 'primarySchoolId', 'redeemedInviteId', 'updatedAt'])
+            && resource.data.role in ['guardian', 'teacher']
+            && request.resource.data.role == 'teacher'
+            && request.resource.data.redeemedInviteId is string
+            && existsAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.redeemedInviteId))
+            && getAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.redeemedInviteId)).data.usedBy == uid
+            && getAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.redeemedInviteId)).data.email == resource.data.email
+            && request.auth.uid == uid)
+          || isAdmin()
+        );
+      allow delete: if isAdmin() && uid != request.auth.uid
+        || (signedIn()
+          && request.auth.uid == uid
+          && resource.data.role != 'admin');
+    }
+
+    match /emailIndex/{email} {
+      allow get: if signedIn()
+        && (request.auth.token.email == email || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(['uid', 'email'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == email
+        && !exists(/databases/$(database)/documents/emailIndex/$(email));
+      allow update: if isAdmin();
+      allow delete: if isAdmin()
+        || (signedIn() && request.auth.token.email == email);
+    }
+
+    match /schools/{schoolId} {
+      allow get, list: if resource.data.active == true
+        || (signedIn()
+          && (isAdmin()
+            || hasSchoolRole(schoolId, ['school_admin', 'teacher'])));
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'active', 'address', 'city', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 160
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /classrooms/{classroomId} {
+      allow get, list: if signedIn()
+        && (resource.data.active == true
+          || hasSchoolRole(resource.data.schoolId, ['school_admin', 'teacher']));
+      allow create: if signedIn()
+        && hasSchoolRole(request.resource.data.schoolId, ['school_admin'])
+        && request.resource.data.keys().hasOnly([
+          'schoolId', 'grade', 'name', 'shift', 'active', 'createdAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.grade is string
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn()
+        && hasSchoolRole(resource.data.schoolId, ['school_admin'])
+        && request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isAdmin();
+    }
+
+    match /memberships/{membershipId} {
+      allow get, list: if signedIn()
+        && (resource.data.userId == request.auth.uid
+          || isAdmin()
+          || hasSchoolRole(resource.data.schoolId, ['school_admin']));
+      allow create: if signedIn()
+        && (
+          (request.resource.data.userId == request.auth.uid
+            && request.resource.data.role == 'teacher'
+            && request.resource.data.status == 'active'
+            && request.resource.data.keys().hasOnly([
+              'userId', 'schoolId', 'role', 'status', 'createdAt', 'inviteId'
+            ])
+            && request.resource.data.inviteId is string
+            && existsAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.inviteId))
+            && getAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid
+            && getAfter(/databases/$(database)/documents/teacherInvites/$(request.resource.data.inviteId)).data.schoolId == request.resource.data.schoolId)
+          || (isAdmin()
+            && request.resource.data.role == 'school_admin'
+            && request.resource.data.status == 'active'
+            && request.resource.data.keys().hasOnly([
+              'userId', 'schoolId', 'role', 'status', 'createdAt'
+            ]))
+        );
+      allow update: if signedIn()
+        && (isAdmin()
+          || (hasSchoolRole(resource.data.schoolId, ['school_admin'])
+            && request.resource.data.userId == resource.data.userId
+            && request.resource.data.schoolId == resource.data.schoolId
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['role', 'status'])));
+      allow delete: if isAdmin()
+        || (signedIn()
+          && (resource.data.userId == request.auth.uid
+            || hasSchoolRole(resource.data.schoolId, ['school_admin'])));
+    }
+
+    match /students/{studentId} {
+      allow get, list: if signedIn()
+        && (isAdmin()
+          || resource.data.ownerUid == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+          || exists(linkPath(request.auth.uid, studentId))
+          || (resource.data.schoolId != null
+            && hasSchoolRole(resource.data.schoolId, ['teacher', 'school_admin'])));
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'ownerUid', 'guardianId', 'username', 'fullName', 'nickname', 'grade',
+          'schoolId', 'status', 'studentCode', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.fullName is string
+        && request.resource.data.grade is string
+        && request.resource.data.username is string
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/studentUsernames/$(request.resource.data.username))
+        && getAfter(/databases/$(database)/documents/studentUsernames/$(request.resource.data.username)).data.studentId == studentId
+        && (
+          (request.resource.data.ownerUid == request.auth.uid
+            && roleIs('student')
+            && request.resource.data.guardianId == null
+            && request.resource.data.status == 'active'
+            && request.resource.data.studentCode is string
+            && existsAfter(/databases/$(database)/documents/studentCodes/$(request.resource.data.studentCode))
+            && getAfter(/databases/$(database)/documents/studentCodes/$(request.resource.data.studentCode)).data.studentId == studentId
+            && getAfter(/databases/$(database)/documents/studentCodes/$(request.resource.data.studentCode)).data.ownerUid == request.auth.uid)
+          || (request.resource.data.ownerUid == null
+            && request.resource.data.guardianId == request.auth.uid
+            && request.resource.data.status in ['active', 'pending']
+            && (request.resource.data.schoolId == null
+              ? request.resource.data.status == 'active'
+              : request.resource.data.status == 'pending')
+            && roleIs('guardian'))
+        );
+      allow update: if signedIn()
+        && (
+          ((resource.data.ownerUid == request.auth.uid
+              || resource.data.guardianId == request.auth.uid)
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['fullName', 'nickname', 'grade', 'updatedAt']))
+          || (resource.data.schoolId != null
+            && hasSchoolRole(resource.data.schoolId, ['teacher', 'school_admin'])
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt'])
+            && request.resource.data.updatedAt == request.time)
+          || isAdmin()
+        );
+      allow delete: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+          || isAdmin());
+
+      match /quizSessions/{sessionId} {
+        allow get, list: if canReadStudent(studentId);
+        allow create: if canWriteStudent(studentId)
+          && request.resource.data.studentId == studentId
+          && request.resource.data.keys().hasOnly([
+            'studentId', 'clientSessionId', 'subject', 'grade', 'topic', 'score',
+            'stars', 'correctAnswers', 'totalQuestions', 'durationSeconds',
+            'completedAt', 'createdAt'
+          ])
+          && request.resource.data.score is int
+          && request.resource.data.score >= 0
+          && request.resource.data.correctAnswers >= 0
+          && request.resource.data.totalQuestions >= request.resource.data.correctAnswers
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if canWriteStudent(studentId);
+
+        match /attempts/{attemptId} {
+          allow get, list: if canReadStudent(studentId);
+          allow create: if canWriteStudent(studentId)
+            && existsAfter(/databases/$(database)/documents/students/$(studentId)/quizSessions/$(sessionId))
+            && request.resource.data.keys().hasOnly([
+              'question', 'selectedAnswer', 'correctAnswer', 'isCorrect',
+              'questionOrder', 'createdAt'
+            ])
+            && request.resource.data.questionOrder is int
+            && request.resource.data.createdAt == request.time;
+          allow update: if false;
+          allow delete: if canWriteStudent(studentId);
+        }
+      }
+
+      match /progress/{progressId} {
+        allow get, list: if canReadStudent(studentId);
+        allow create, update: if canWriteStudent(studentId)
+          && request.resource.data.keys().hasOnly([
+            'subject', 'grade', 'topic', 'completed', 'completedAt', 'updatedAt'
+          ])
+          && request.resource.data.completed is bool
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if canWriteStudent(studentId);
+      }
+
+      match /consents/{consentId} {
+        allow get, list: if signedIn()
+          && (resource.data.guardianId == request.auth.uid || isAdmin());
+        allow create: if signedIn()
+          && request.resource.data.guardianId == request.auth.uid
+          && getAfter(studentPath(studentId)).data.guardianId == request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'guardianId', 'version', 'consentedAt'
+          ])
+          && request.resource.data.consentedAt == request.time;
+        allow update: if isAdmin();
+        allow delete: if signedIn()
+          && (resource.data.guardianId == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /studentCodes/{code} {
+      allow get: if signedIn() && (roleIs('guardian') || roleIs('admin'));
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'studentId', 'ownerUid', 'fullName', 'grade', 'schoolId', 'createdAt'
+        ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(studentPath(request.resource.data.studentId)).data.ownerUid == request.auth.uid
+        && getAfter(studentPath(request.resource.data.studentId)).data.studentCode == code;
+      allow update: if false;
+      allow delete: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid || isAdmin());
+    }
+
+    match /studentUsernames/{username} {
+      allow get, list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'studentId', 'ownerUid', 'guardianId', 'createdAt'
+        ])
+        && request.resource.data.createdAt == request.time
+        && getAfter(studentPath(request.resource.data.studentId)).data.username == username
+        && (
+          (request.resource.data.ownerUid == request.auth.uid
+            && request.resource.data.guardianId == null
+            && roleIs('student')
+            && getAfter(studentPath(request.resource.data.studentId)).data.ownerUid == request.auth.uid)
+          || (request.resource.data.ownerUid == null
+            && request.resource.data.guardianId == request.auth.uid
+            && roleIs('guardian')
+            && getAfter(studentPath(request.resource.data.studentId)).data.guardianId == request.auth.uid)
+        );
+      allow update: if false;
+      allow delete: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || resource.data.guardianId == request.auth.uid
+          || isAdmin());
+    }
+
+    match /studentLinks/{linkId} {
+      allow get, list: if signedIn()
+        && (resource.data.guardianId == request.auth.uid || isAdmin());
+      allow create: if signedIn()
+        && roleIs('guardian')
+        && request.resource.data.guardianId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'guardianId', 'studentId', 'code', 'createdAt'
+        ])
+        && request.resource.data.createdAt == request.time
+        && linkId == request.resource.data.guardianId + '_' + request.resource.data.studentId
+        && exists(/databases/$(database)/documents/studentCodes/$(request.resource.data.code))
+        && get(/databases/$(database)/documents/studentCodes/$(request.resource.data.code)).data.studentId == request.resource.data.studentId
+        && get(/databases/$(database)/documents/studentCodes/$(request.resource.data.code)).data.ownerUid
+          == get(studentPath(request.resource.data.studentId)).data.ownerUid;
+      allow update: if false;
+      allow delete: if signedIn()
+        && (resource.data.guardianId == request.auth.uid || isAdmin());
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow get, list: if signedIn()
+        && (isAdmin()
+          || (resource.data.studentId != null
+            && canReadStudent(resource.data.studentId))
+          || hasSchoolRole(resource.data.schoolId, ['teacher', 'school_admin']));
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'studentId', 'schoolId', 'classroomId', 'active', 'createdAt', 'updatedAt'
+        ])
+        && get(studentPath(request.resource.data.studentId)).data.schoolId
+          == request.resource.data.schoolId
+        && hasSchoolRole(request.resource.data.schoolId, ['teacher', 'school_admin'])
+        && request.resource.data.classroomId is string
+        && get(/databases/$(database)/documents/classrooms/$(request.resource.data.classroomId)).data.schoolId
+          == request.resource.data.schoolId
+        && request.resource.data.active == true;
+      allow delete: if isAdmin()
+        || (resource.data.studentId != null
+          && canWriteStudent(resource.data.studentId));
+    }
+
+    match /teacherInvites/{inviteId} {
+      allow get: if signedIn()
+        && request.auth.token.email == resource.data.email
+        && resource.data.usedBy == null
+        && resource.data.expiresAt > request.time;
+      allow list: if signedIn()
+        && (isAdmin()
+          || resource.data.createdBy == request.auth.uid
+          || resource.data.email == request.auth.token.email
+          || hasSchoolRole(resource.data.schoolId, ['school_admin']));
+      allow create: if signedIn()
+        && hasSchoolRole(request.resource.data.schoolId, ['school_admin'])
+        && request.resource.data.keys().hasOnly([
+          'schoolId', 'email', 'createdBy', 'createdAt', 'expiresAt', 'usedBy'
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.usedBy == null
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn()
+        && resource.data.usedBy == null
+        && resource.data.email == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['usedBy', 'usedAt'])
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.usedAt == request.time
+        && existsAfter(userPath(request.auth.uid))
+        && getAfter(userPath(request.auth.uid)).data.role == 'teacher'
+        && getAfter(userPath(request.auth.uid)).data.redeemedInviteId == inviteId
+        && existsAfter(membershipPath(request.auth.uid, resource.data.schoolId))
+        && getAfter(membershipPath(request.auth.uid, resource.data.schoolId)).data.inviteId
+          == inviteId;
+      allow delete: if isAdmin()
+        || (signedIn()
+          && resource.data.email == request.auth.token.email)
+        || hasSchoolRole(resource.data.schoolId, ['school_admin']);
+    }
+  }
+}

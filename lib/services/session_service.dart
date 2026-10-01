@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend_service.dart';
+import 'firebase_service.dart';
 import 'progresso_service.dart';
 import 'user_service.dart';
 
@@ -13,6 +14,9 @@ abstract final class SessionService {
   };
 
   static Future<void> logout() async {
+    if (FirebaseService.instance.isInitialized) {
+      await FirebaseService.instance.auth.signOut();
+    }
     if (BackendService.instance.isInitialized) {
       try {
         await BackendService.instance.client.auth.signOut();

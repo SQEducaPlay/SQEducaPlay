@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1093809342544",
+    "project_id": "sqeducaplay",
+    "storage_bucket": "sqeducaplay.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1093809342544:android:5eed62a836aa28acfa6955",
+        "android_client_info": {
+          "package_name": "br.com.sqeducaplay.sqeducaplay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNkb3XIkP14i_lLqRE-12UklDZ5yQzsss"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

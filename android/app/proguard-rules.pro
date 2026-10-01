@@ -21,3 +21,4 @@
 # Suprimir warnings conhecidos não críticos
 -dontwarn java.awt.**
 -dontwarn javax.**
+-dontwarn com.google.android.play.core.**

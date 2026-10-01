@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../config/privacy_policy_config.dart';
 import '../database/app_database.dart';
@@ -11,10 +10,10 @@ import '../home_page.dart';
 import '../materias_page.dart';
 import '../models/user_model.dart';
 import 'access_choice_page.dart';
-import '../services/backend_service.dart';
+import '../services/firebase_data_service.dart';
+import '../services/firebase_service.dart';
 import '../services/password_service.dart';
 import '../services/progresso_service.dart';
-import '../services/remote_sync_service.dart';
 import '../services/user_service.dart';
 import '../widgets/confirm_exit_scope.dart';
 
@@ -69,8 +68,8 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   void initState() {
     super.initState();
     _createAccount = widget.startWithSignUp;
-    if (BackendService.instance.isInitialized &&
-        BackendService.instance.client.auth.currentSession != null) {
+    if (FirebaseService.instance.isInitialized &&
+        FirebaseService.instance.auth.currentUser != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadAccount());
     } else if (!_createAccount) {
       _loadSavedCredentials();
@@ -142,7 +141,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   }
 
   Future<void> _forgotPassword() async {
-    if (!BackendService.instance.isInitialized) {
+    if (!FirebaseService.instance.isInitialized) {
       setState(
         () => _error =
             'O acesso online ainda nao esta configurado nesta versao do aplicativo.',
@@ -162,10 +161,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _info = null;
     });
     try {
-      await BackendService.instance.client.auth.resetPasswordForEmail(
-        email,
-        redirectTo: kIsWeb ? Uri.base.toString() : null,
-      );
+      await FirebaseService.instance.auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -211,7 +207,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   }
 
   Future<void> _authenticate() async {
-    if (!BackendService.instance.isInitialized) {
+    if (!FirebaseService.instance.isInitialized) {
       setState(
         () => _error =
             'O acesso online ainda nao esta configurado nesta versao do aplicativo.',
@@ -239,30 +235,24 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _info = null;
     });
     try {
-      final auth = BackendService.instance.client.auth;
       if (_createAccount) {
-        final response = await auth.signUp(
+        await FirebaseDataService.createAccount(
           email: email,
           password: password,
-          data: {'full_name': _guardianNameController.text.trim()},
-          emailRedirectTo: kIsWeb ? Uri.base.toString() : null,
+          fullName: _guardianNameController.text.trim(),
+          role: 'guardian',
         );
-        if (response.session == null) {
-          setState(() {
-            _busy = false;
-            _error =
-                'Confira seu e-mail e confirme a conta; depois volte e entre.';
-          });
-          return;
-        }
       } else {
-        await auth.signInWithPassword(email: email, password: password);
+        await FirebaseService.instance.auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       }
       await _persistCredentials(email, password);
       await _loadAccount();
-    } on AuthException catch (error) {
+    } on firebase_auth.FirebaseAuthException catch (error) {
       setState(() {
-        _error = _friendlyAuthError(error.message);
+        _error = _friendlyAuthError(error);
         _busy = false;
       });
     } catch (_) {
@@ -274,18 +264,21 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     }
   }
 
-  String _friendlyAuthError(String message) {
-    final normalized = message.toLowerCase();
-    if (normalized.contains('invalid login credentials')) {
-      return 'E-mail ou senha incorretos.';
+  String _friendlyAuthError(firebase_auth.FirebaseAuthException error) {
+    switch (error.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'E-mail ou senha incorretos.';
+      case 'email-already-in-use':
+        return 'Esse e-mail ja tem conta. Escolha Entrar.';
+      case 'weak-password':
+        return 'A senha nao atende aos requisitos da conta.';
+      default:
+        return error.message == null
+            ? 'Nao foi possivel autenticar. Verifique os dados e tente novamente.'
+            : 'Nao foi possivel autenticar (${error.message}).';
     }
-    if (normalized.contains('already registered')) {
-      return 'Esse e-mail ja tem conta. Escolha Entrar.';
-    }
-    if (normalized.contains('password')) {
-      return 'A senha nao atende aos requisitos da conta.';
-    }
-    return 'Nao foi possivel autenticar. Verifique os dados e tente novamente.';
   }
 
   Future<void> _loadAccount() async {
@@ -294,17 +287,9 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _error = null;
     });
     try {
-      final client = BackendService.instance.client;
-      final authUser = client.auth.currentUser;
+      final authUser = FirebaseService.instance.auth.currentUser;
       if (authUser == null) throw StateError('Sessao encerrada.');
-      final profile = await client
-          .from('profiles')
-          .select('id, full_name, role')
-          .eq('id', authUser.id)
-          .maybeSingle();
-      if (profile == null) {
-        throw StateError('O perfil da conta ainda nao foi criado no banco.');
-      }
+      final profile = await FirebaseDataService.fetchCurrentProfile();
       final role = profile['role'] as String? ?? 'guardian';
       if (role != 'guardian' && role != 'admin') {
         setState(() {
@@ -315,13 +300,13 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
         return;
       }
 
-      final children = await RemoteSyncService.listChildren();
-      final schools = await RemoteSyncService.listActiveSchools();
-      final linkedStudents = await RemoteSyncService.listLinkedStudents();
+      final children = await FirebaseDataService.listChildren();
+      final schools = await FirebaseDataService.listActiveSchools();
+      final linkedStudents = await FirebaseDataService.listLinkedStudents();
       if (!mounted) return;
       setState(() {
         _guardianRole = role;
-        _guardianFullName = profile['full_name'] as String? ?? '';
+        _guardianFullName = profile['fullName'] as String? ?? '';
         _children = children;
         _schools = schools;
         _linkedStudents = linkedStudents;
@@ -338,14 +323,14 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
   }
 
   Future<void> _openAdmin() async {
-    final authUser = BackendService.instance.client.auth.currentUser;
+    final authUser = FirebaseService.instance.auth.currentUser;
     if (authUser == null) {
       setState(() => _error = 'A sessao do administrador expirou.');
       return;
     }
     final user = User(
-      username: '_admin_${authUser.id.substring(0, 12)}',
-      password: RemoteSyncService.createClientSessionId(),
+      username: '_admin_${authUser.uid.substring(0, 12)}',
+      password: FirebaseDataService.createClientSessionId(),
       fullName: _guardianFullName ?? 'Administrador',
       role: 'admin',
     );
@@ -388,7 +373,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _error = null;
     });
     try {
-      await RemoteSyncService.createStudent(
+      await FirebaseDataService.createChildProfile(
         username: username,
         fullName: fullName,
         nickname: _childNicknameController.text.trim().isEmpty
@@ -403,16 +388,9 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _childNicknameController.clear();
       _consentAccepted = false;
       await _loadAccount();
-    } on PostgrestException catch (error) {
+    } catch (error) {
       setState(() {
-        _error = error.message.contains('already in use')
-            ? 'Esse usuario ja esta em uso. Escolha outro.'
-            : 'Nao foi possivel criar o perfil. Confira os dados e tente novamente.';
-        _busy = false;
-      });
-    } catch (_) {
-      setState(() {
-        _error = 'Nao foi possivel criar o perfil. Tente novamente.';
+        _error = 'Nao foi possivel criar o perfil ($error).';
         _busy = false;
       });
     }
@@ -425,7 +403,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _error = null;
     });
     try {
-      final localUser = await RemoteSyncService.activateStudent(child);
+      final localUser = await FirebaseDataService.activateStudent(child);
       final localStudents =
           (await AppDatabase.instance.getLocalStudentsWithUnlinkedHistory())
               .where((user) => user.id != localUser.id)
@@ -436,7 +414,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
           child['nickname'] as String? ?? child['full_name'] as String,
         );
         if (migration != null) {
-          await RemoteSyncService.migrateLocalStudentHistory(
+          await FirebaseDataService.migrateLocalStudentHistory(
             sourceUser: migration.user,
             sourcePassword: migration.password,
             remoteStudent: localUser,
@@ -481,8 +459,8 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
       _linkInfo = null;
     });
     try {
-      final linked = await RemoteSyncService.linkStudentByCode(code);
-      final linkedStudents = await RemoteSyncService.listLinkedStudents();
+      final linked = await FirebaseDataService.linkStudentByCode(code);
+      final linkedStudents = await FirebaseDataService.listLinkedStudents();
       if (!mounted) return;
       _linkCodeController.clear();
       setState(() {
@@ -634,7 +612,7 @@ class _GuardianAccessPageState extends State<GuardianAccessPage> {
     if (shouldSignOut != true) return;
 
     try {
-      await BackendService.instance.client.auth.signOut();
+      await FirebaseService.instance.auth.signOut();
       ProgressoService().setRemoteStudentScope(null);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(

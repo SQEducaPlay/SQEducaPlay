@@ -5,12 +5,14 @@ import 'package:flutter/services.dart';
 import 'database/app_database.dart';
 import 'services/backend_service.dart';
 import 'services/background_audio_service.dart';
+import 'services/firebase_service.dart';
 import 'services/progresso_service.dart';
 import 'theme/design_tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Backend Supabase é opcional; sem --dart-define o app opera offline.
+  await FirebaseService.instance.initialize();
+  // Supabase remains active during the migration and stays available as backup.
   await BackendService.instance.initialize();
   if (kDebugMode) {
     await AppDatabase.instance.ensureDevelopmentAdmin(

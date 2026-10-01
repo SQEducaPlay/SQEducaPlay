@@ -68,7 +68,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                 'No modo local, os dados ficam no armazenamento do dispositivo. Na web, '
                 'o modo local demonstrativo mantem dados temporariamente em memoria no navegador. '
                 'Quando o acesso online estiver habilitado, o e-mail do responsavel, os perfis '
-                'familiares e os registros de quizzes podem ser enviados ao Supabase para permitir '
+                'familiares e os registros de quizzes podem ser enviados ao Firebase para permitir '
                 'sincronizacao entre aparelhos. O acesso aos registros e limitado por autenticacao '
                 'e politicas no banco; a conexao usa HTTPS e o provedor aplica criptografia de '
                 'infraestrutura. Isso nao e criptografia ponta a ponta: o operador do projeto pode '

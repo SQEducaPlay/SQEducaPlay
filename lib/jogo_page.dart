@@ -1960,8 +1960,13 @@ class JogoPageState extends State<JogoPage>
     // Extrai a operação da pergunta
     String operation = '';
 
-    // Padrões comuns: "Quanto é 5 + 3?"
-    final match = RegExp(r'(\d+)\s*([+\-×x÷])\s*(\d+)').firstMatch(question);
+    // Padrões comuns: "Quanto é 5 + 3?" ou "Quanto é 8.457 + 3.896?"
+    // Os grupos tentam primeiro numeros com ponto de milhar (ex: 8.457)
+    // antes de caírem para um número simples, evitando capturar apenas o
+    // final do número (ex: "457" em vez de "8.457").
+    final match = RegExp(
+      r'(\d{1,3}(?:\.\d{3})+|\d+)\s*([+\-×x÷])\s*(\d{1,3}(?:\.\d{3})+|\d+)',
+    ).firstMatch(question);
     if (match != null) {
       operation = '${match.group(1)} ${match.group(2)} ${match.group(3)}';
     }

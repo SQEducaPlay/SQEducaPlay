@@ -232,6 +232,12 @@ class FractionPainter extends CustomPainter {
       oldDelegate.denominator != denominator;
 }
 
+// Verifica se um segmento extraido da pergunta representa um numero
+// (inteiro, decimal com "." ou ",", com separador de milhar, ou fracao
+// como "3/5") para fins de exibicao no card de operacao matematica.
+bool _isDisplayableNumber(String part) =>
+    part.isNotEmpty && RegExp(r'^\d').hasMatch(part);
+
 // Widget para mostrar operações matemáticas visualmente
 // Widget estilo educativo para operações matemáticas (inspirado em apps infantis)
 class MathCardStyleWidget extends StatelessWidget {
@@ -294,8 +300,8 @@ class MathCardStyleWidget extends StatelessWidget {
             ),
           ),
         );
-      } else if (int.tryParse(part) != null) {
-        // Número
+      } else if (_isDisplayableNumber(part)) {
+        // Número (inteiro, decimal, com separador de milhar ou fração)
         widgets.add(
           Text(
             part,
@@ -397,8 +403,8 @@ class MathOperationWidget extends StatelessWidget {
             ),
           ),
         );
-      } else if (int.tryParse(part) != null) {
-        // É um número
+      } else if (_isDisplayableNumber(part)) {
+        // É um número (inteiro, decimal, com separador de milhar ou fração)
         widgets.add(
           Text(
             part,
@@ -1960,12 +1966,15 @@ class JogoPageState extends State<JogoPage>
     // Extrai a operação da pergunta
     String operation = '';
 
-    // Padrões comuns: "Quanto é 5 + 3?" ou "Quanto é 8.457 + 3.896?"
-    // Os grupos tentam primeiro numeros com ponto de milhar (ex: 8.457)
-    // antes de caírem para um número simples, evitando capturar apenas o
-    // final do número (ex: "457" em vez de "8.457").
+    // Padrões comuns: "Quanto é 5 + 3?", "Quanto é 8.457 + 3.896?",
+    // "Quanto é 9,5 - 2,3?" ou "Quanto é 3/5 + 1/5?".
+    // Cada termo tenta, em ordem: fração (3/5), número com separador de
+    // milhar (8.457), número decimal com "," ou "." (9,5 / 12.0) e por
+    // fim um inteiro simples. A ordem evita capturar apenas parte do
+    // número (ex: "457" em vez de "8.457", ou "5" em vez de "3/5").
+    const term = r'\d+/\d+|\d{1,3}(?:\.\d{3})+|\d+[.,]\d+|\d+';
     final match = RegExp(
-      r'(\d{1,3}(?:\.\d{3})+|\d+)\s*([+\-×x÷])\s*(\d{1,3}(?:\.\d{3})+|\d+)',
+      '($term)\\s*([+\\-×x÷])\\s*($term)',
     ).firstMatch(question);
     if (match != null) {
       operation = '${match.group(1)} ${match.group(2)} ${match.group(3)}';

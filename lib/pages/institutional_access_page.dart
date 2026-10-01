@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
-import '../services/backend_service.dart';
+import '../services/firebase_data_service.dart';
+import '../services/firebase_service.dart';
 import '../widgets/confirm_exit_scope.dart';
 
 class InstitutionalAccessPage extends StatefulWidget {
@@ -30,8 +30,8 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
   void initState() {
     super.initState();
     _creatingAccount = widget.startWithSignUp;
-    if (BackendService.instance.isInitialized &&
-        BackendService.instance.client.auth.currentSession != null) {
+    if (FirebaseService.instance.isInitialized &&
+        FirebaseService.instance.auth.currentUser != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadAccount());
     }
   }
@@ -46,7 +46,7 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
   }
 
   Future<void> _authenticate() async {
-    if (!BackendService.instance.isInitialized) {
+    if (!FirebaseService.instance.isInitialized) {
       setState(() => _error = 'O acesso institucional nao esta configurado.');
       return;
     }
@@ -70,40 +70,31 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
       _error = null;
     });
     try {
-      final auth = BackendService.instance.client.auth;
       if (_creatingAccount) {
-        final response = await auth.signUp(
+        await FirebaseDataService.createAccount(
           email: email,
           password: password,
-          data: {'full_name': _nameController.text.trim()},
-          emailRedirectTo: kIsWeb ? Uri.base.toString() : null,
+          fullName: _nameController.text.trim(),
+          role: 'guardian',
         );
-        if (response.session == null) {
-          setState(() {
-            _creatingAccount = false;
-            _busy = false;
-            _error =
-                'Confirme o e-mail. Depois entre com o mesmo e-mail e informe o convite da escola.';
-          });
-          return;
-        }
       } else {
-        await auth.signInWithPassword(email: email, password: password);
+        await FirebaseService.instance.auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       }
       await _loadAccount(inviteCode: _inviteController.text.trim());
-    } on AuthException catch (error) {
+    } on firebase_auth.FirebaseAuthException catch (error) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = error.message.toLowerCase().contains('invalid login')
-            ? 'E-mail ou senha incorretos.'
-            : 'Nao foi possivel autenticar. Confira os dados e o convite.';
-      });
-    } on PostgrestException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = _friendlyBackendError(error.message);
+        _error = switch (error.code) {
+          'invalid-credential' ||
+          'wrong-password' ||
+          'user-not-found' => 'E-mail ou senha incorretos.',
+          'email-already-in-use' => 'Esse e-mail ja tem conta. Escolha Entrar.',
+          _ => 'Nao foi possivel autenticar. Confira os dados e o convite.',
+        };
       });
     } catch (_) {
       if (!mounted) return;
@@ -115,7 +106,7 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
   }
 
   Future<void> _loadAccount({String? inviteCode}) async {
-    if (!BackendService.instance.isInitialized) return;
+    if (!FirebaseService.instance.isInitialized) return;
     if (mounted) {
       setState(() {
         _busy = true;
@@ -123,29 +114,17 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
       });
     }
     try {
-      final client = BackendService.instance.client;
-      final authUser = client.auth.currentUser;
+      final authUser = FirebaseService.instance.auth.currentUser;
       if (authUser == null) throw StateError('Sessao institucional encerrada.');
 
-      var profile = await client
-          .from('profiles')
-          .select('id, full_name, role')
-          .eq('id', authUser.id)
-          .single();
+      var profile = await FirebaseDataService.fetchCurrentProfile();
 
       final role = profile['role'] as String? ?? '';
       if ((role == 'guardian' || role == 'teacher') &&
           inviteCode != null &&
           inviteCode.isNotEmpty) {
-        await client.rpc(
-          'redeem_teacher_invite',
-          params: {'p_invite_token': inviteCode},
-        );
-        profile = await client
-            .from('profiles')
-            .select('id, full_name, role')
-            .eq('id', authUser.id)
-            .single();
+        await FirebaseDataService.redeemTeacherInvite(inviteCode);
+        profile = await FirebaseDataService.fetchCurrentProfile();
       }
 
       final nextRole = profile['role'] as String? ?? '';
@@ -159,13 +138,7 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
 
       final memberships = nextRole == 'admin'
           ? <Map<String, dynamic>>[]
-          : List<Map<String, dynamic>>.from(
-              await client
-                  .from('school_memberships')
-                  .select('school_id, role, status')
-                  .eq('user_id', authUser.id)
-                  .eq('status', 'active'),
-            );
+          : await FirebaseDataService.listMemberships(authUser.uid);
       if (nextRole != 'admin' && memberships.isEmpty) {
         throw StateError('A escola ainda nao liberou o acesso institucional.');
       }
@@ -175,12 +148,6 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
         _profile = Map<String, dynamic>.from(profile);
         _memberships = memberships;
         _busy = false;
-      });
-    } on PostgrestException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = _friendlyBackendError(error.message);
       });
     } catch (error) {
       if (!mounted) return;
@@ -193,19 +160,9 @@ class _InstitutionalAccessPageState extends State<InstitutionalAccessPage> {
     }
   }
 
-  String _friendlyBackendError(String message) {
-    final normalized = message.toLowerCase();
-    if (normalized.contains('invitation') ||
-        normalized.contains('invite') ||
-        normalized.contains('email')) {
-      return 'O convite nao e valido para este e-mail, expirou ou ja foi usado. Confira com a escola.';
-    }
-    return 'A operacao nao foi autorizada ou os dados da escola estao indisponiveis.';
-  }
-
   Future<void> _signOut() async {
     try {
-      await BackendService.instance.client.auth.signOut();
+      await FirebaseService.instance.auth.signOut();
       if (!mounted) return;
       setState(() {
         _profile = null;
@@ -381,37 +338,16 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
     super.dispose();
   }
 
-  SupabaseClient get _client => BackendService.instance.client;
-
   Future<void> _loadSchools() async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      List<Map<String, dynamic>> schools;
-      if (widget.isPlatformAdmin) {
-        schools = List<Map<String, dynamic>>.from(
-          await _client
-              .from('schools')
-              .select('id, name, active')
-              .order('name'),
-        );
-      } else {
-        final ids = widget.memberships
-            .map((row) => row['school_id'] as String)
-            .toSet()
-            .toList();
-        schools = ids.isEmpty
-            ? <Map<String, dynamic>>[]
-            : List<Map<String, dynamic>>.from(
-                await _client
-                    .from('schools')
-                    .select('id, name, active')
-                    .inFilter('id', ids)
-                    .order('name'),
-              );
-      }
+      final schools = await FirebaseDataService.listAuthorizedSchools(
+        isPlatformAdmin: widget.isPlatformAdmin,
+        memberships: widget.memberships,
+      );
       final selected =
           _selectedSchoolId != null &&
               schools.any((school) => school['id'] == _selectedSchoolId)
@@ -427,89 +363,41 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
         });
       }
       if (selected != null) await _loadSchoolData(selected);
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = 'Nao foi possivel consultar as escolas autorizadas.';
+        _error = 'Nao foi possivel consultar as escolas autorizadas ($error).';
       });
     }
   }
 
   Future<void> _loadSchoolData(String schoolId) async {
     try {
-      final classrooms = List<Map<String, dynamic>>.from(
-        await _client
-            .from('classrooms')
-            .select('id, school_id, grade, name, shift, active')
-            .eq('school_id', schoolId)
-            .eq('active', true)
-            .order('grade')
-            .order('name'),
-      );
-      final pending = List<Map<String, dynamic>>.from(
-        await _client
-            .from('student_profiles')
-            .select('id, full_name, nickname, grade, status')
-            .eq('school_id', schoolId)
-            .eq('status', 'pending')
-            .order('created_at'),
-      );
-      final classroomIds = classrooms
-          .map((row) => row['id'] as String)
-          .toList();
-      final enrollments = classroomIds.isEmpty
-          ? <Map<String, dynamic>>[]
-          : List<Map<String, dynamic>>.from(
-              await _client
-                  .from('student_enrollments')
-                  .select('student_id, classroom_id')
-                  .inFilter('classroom_id', classroomIds)
-                  .eq('active', true),
-            );
-      final studentIds = enrollments
-          .map((row) => row['student_id'] as String)
-          .toSet()
-          .toList();
-      final students = studentIds.isEmpty
-          ? <Map<String, dynamic>>[]
-          : List<Map<String, dynamic>>.from(
-              await _client
-                  .from('student_profiles')
-                  .select('id, full_name, nickname, grade, status')
-                  .inFilter('id', studentIds)
-                  .order('full_name'),
-            );
-      final sessions = studentIds.isEmpty
-          ? <Map<String, dynamic>>[]
-          : List<Map<String, dynamic>>.from(
-              await _client
-                  .from('quiz_sessions')
-                  .select('student_id, score')
-                  .inFilter('student_id', studentIds),
-            );
-      final stats = <String, ({int quizzes, int points})>{};
-      for (final session in sessions) {
-        final studentId = session['student_id'] as String;
-        final previous = stats[studentId] ?? (quizzes: 0, points: 0);
-        stats[studentId] = (
-          quizzes: previous.quizzes + 1,
-          points: previous.points + (session['score'] as int? ?? 0),
-        );
-      }
+      final workspace = await FirebaseDataService.loadSchoolWorkspace(schoolId);
       if (!mounted) return;
       setState(() {
-        _classrooms = classrooms;
-        _pendingStudents = pending;
-        _enrolledStudents = students;
-        _enrollments = enrollments;
-        _studentStats = stats;
+        _classrooms = List<Map<String, dynamic>>.from(
+          workspace['classrooms'] as List,
+        );
+        _pendingStudents = List<Map<String, dynamic>>.from(
+          workspace['pendingStudents'] as List,
+        );
+        _enrolledStudents = List<Map<String, dynamic>>.from(
+          workspace['enrolledStudents'] as List,
+        );
+        _enrollments = List<Map<String, dynamic>>.from(
+          workspace['enrollments'] as List,
+        );
+        _studentStats = Map<String, ({int quizzes, int points})>.from(
+          workspace['studentStats'] as Map,
+        );
         _error = null;
       });
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = 'Nao foi possivel carregar as turmas autorizadas.';
+        _error = 'Nao foi possivel carregar as turmas autorizadas ($error).';
       });
     }
   }
@@ -521,12 +409,12 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
       return;
     }
     try {
-      await _client.from('schools').insert({'name': name});
+      await FirebaseDataService.createSchool(name);
       _schoolNameController.clear();
       await _loadSchools();
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel cadastrar a escola.');
+      setState(() => _error = 'Nao foi possivel cadastrar a escola ($error).');
     }
   }
 
@@ -539,19 +427,19 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
       return;
     }
     try {
-      await _client.from('classrooms').insert({
-        'school_id': schoolId,
-        'grade': grade,
-        'name': name,
-        'shift': _shiftController.text.trim(),
-      });
+      await FirebaseDataService.createClassroom(
+        schoolId: schoolId,
+        grade: grade,
+        name: name,
+        shift: _shiftController.text.trim(),
+      );
       _classNameController.clear();
       _gradeController.clear();
       _shiftController.clear();
       await _loadSchoolData(schoolId);
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel cadastrar a turma.');
+      setState(() => _error = 'Nao foi possivel cadastrar a turma ($error).');
     }
   }
 
@@ -565,9 +453,9 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
       return;
     }
     try {
-      final code = await _client.rpc(
-        'create_teacher_invite',
-        params: {'p_school_id': schoolId, 'p_email': email},
+      final code = await FirebaseDataService.issueTeacherInvite(
+        schoolId: schoolId,
+        email: email,
       );
       _inviteEmailController.clear();
       if (!mounted) return;
@@ -586,10 +474,11 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
           ],
         ),
       );
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
       setState(
-        () => _error = 'Sua conta nao pode emitir convite para esta escola.',
+        () => _error =
+            'Sua conta nao pode emitir convite para esta escola ($error).',
       );
     }
   }
@@ -605,37 +494,37 @@ class _InstitutionalWorkspaceState extends State<_InstitutionalWorkspace> {
       return;
     }
     try {
-      await _client.rpc(
-        'assign_school_administrator',
-        params: {'p_school_id': schoolId, 'p_email': email},
+      await FirebaseDataService.assignSchoolAdministrator(
+        schoolId: schoolId,
+        email: email,
       );
       _administratorEmailController.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Administrador escolar autorizado.')),
       );
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
       setState(
         () => _error =
-            'Crie primeiro a conta deste usuario e confira o e-mail informado.',
+            'Crie primeiro a conta deste usuario e confira o e-mail informado ($error).',
       );
     }
   }
 
   Future<void> _approveStudent(String studentId, String classroomId) async {
     try {
-      await _client.rpc(
-        'approve_student',
-        params: {'p_student_id': studentId, 'p_classroom_id': classroomId},
+      await FirebaseDataService.approveStudent(
+        studentId: studentId,
+        classroomId: classroomId,
       );
       final schoolId = _selectedSchoolId;
       if (schoolId != null) await _loadSchoolData(schoolId);
-    } on PostgrestException {
+    } catch (error) {
       if (!mounted) return;
       setState(
         () => _error =
-            'Nao foi possivel matricular o perfil. Confira sua autorizacao e a turma.',
+            'Nao foi possivel matricular o perfil. Confira sua autorizacao e a turma ($error).',
       );
     }
   }

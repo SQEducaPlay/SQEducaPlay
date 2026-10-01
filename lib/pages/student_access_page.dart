@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../materias_page.dart';
-import '../services/backend_service.dart';
+import '../services/firebase_data_service.dart';
+import '../services/firebase_service.dart';
 import '../services/progresso_service.dart';
-import '../services/remote_sync_service.dart';
 import '../services/user_service.dart';
 import '../widgets/confirm_exit_scope.dart';
 
@@ -70,7 +69,7 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
 
   Future<void> _loadSchools() async {
     try {
-      final schools = await RemoteSyncService.listActiveSchools();
+      final schools = await FirebaseDataService.listActiveSchools();
       if (!mounted) return;
       setState(() => _schools = schools);
     } catch (_) {
@@ -130,7 +129,7 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
   }
 
   Future<void> _forgotPassword() async {
-    if (!BackendService.instance.isInitialized) {
+    if (!FirebaseService.instance.isInitialized) {
       setState(
         () => _error =
             'O acesso online ainda nao esta configurado nesta versao do aplicativo.',
@@ -150,10 +149,7 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
       _info = null;
     });
     try {
-      await BackendService.instance.client.auth.resetPasswordForEmail(
-        email,
-        redirectTo: kIsWeb ? Uri.base.toString() : null,
-      );
+      await FirebaseService.instance.auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -198,22 +194,25 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
     );
   }
 
-  String _friendlyAuthError(String message) {
-    final normalized = message.toLowerCase();
-    if (normalized.contains('invalid login credentials')) {
-      return 'E-mail ou senha incorretos.';
+  String _friendlyAuthError(firebase_auth.FirebaseAuthException error) {
+    switch (error.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'E-mail ou senha incorretos.';
+      case 'email-already-in-use':
+        return 'Esse e-mail ja tem conta. Escolha Entrar.';
+      case 'weak-password':
+        return 'A senha nao atende aos requisitos da conta.';
+      default:
+        return error.message == null
+            ? 'Nao foi possivel autenticar. Confira os dados e tente novamente.'
+            : 'Nao foi possivel autenticar (${error.message}).';
     }
-    if (normalized.contains('already registered')) {
-      return 'Esse e-mail ja tem conta. Escolha Entrar.';
-    }
-    if (normalized.contains('password')) {
-      return 'A senha nao atende aos requisitos da conta.';
-    }
-    return 'Nao foi possivel autenticar. Verifique os dados e tente novamente.';
   }
 
   Future<void> _authenticate() async {
-    if (!BackendService.instance.isInitialized) {
+    if (!FirebaseService.instance.isInitialized) {
       setState(
         () => _error =
             'O acesso online ainda nao esta configurado nesta versao do aplicativo.',
@@ -247,65 +246,62 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
       _info = null;
     });
     try {
-      final auth = BackendService.instance.client.auth;
       if (_createAccount) {
-        final response = await auth.signUp(
+        await FirebaseDataService.createAccount(
           email: email,
           password: password,
-          data: {
-            'full_name': _fullNameController.text.trim(),
-            'account_type': 'student',
-          },
-          emailRedirectTo: kIsWeb ? Uri.base.toString() : null,
-        );
-        if (response.session == null) {
-          setState(() {
-            _busy = false;
-            _error =
-                'Confira seu e-mail e confirme a conta; depois volte e entre.';
-          });
-          return;
-        }
-        await RemoteSyncService.createSelfStudentProfile(
           fullName: _fullNameController.text.trim(),
-          grade: _selectedGrade!,
-          schoolId: _selectedSchoolId,
+          role: 'student',
         );
+        try {
+          await FirebaseDataService.createSelfStudentProfile(
+            fullName: _fullNameController.text.trim(),
+            grade: _selectedGrade!,
+            schoolId: _selectedSchoolId,
+          );
+        } catch (error) {
+          try {
+            await FirebaseDataService.deleteCurrentAccount(password: password);
+          } catch (cleanupError) {
+            throw StateError(
+              'Não foi possível criar o perfil de aluno ($error) nem remover a conta incompleta ($cleanupError).',
+            );
+          }
+          rethrow;
+        }
       } else {
-        await auth.signInWithPassword(email: email, password: password);
+        await FirebaseService.instance.auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       }
       await _persistCredentials(email, password);
       await _enterGame();
-    } on AuthException catch (error) {
+    } on firebase_auth.FirebaseAuthException catch (error) {
       setState(() {
-        _error = _friendlyAuthError(error.message);
+        _error = _friendlyAuthError(error);
         _busy = false;
       });
-    } on PostgrestException {
-      setState(() {
-        _error = 'Esta conta nao e uma conta de aluno, ou o perfil ja existe.';
-        _busy = false;
-      });
-    } catch (_) {
+    } catch (error) {
       setState(() {
         _error =
-            'Nao foi possivel conectar. Confira a internet e tente novamente.';
+            'Nao foi possivel conectar. Confira a internet e tente novamente. '
+            '($error)';
         _busy = false;
       });
     }
   }
 
   Future<void> _enterGame() async {
-    final child = await RemoteSyncService.fetchOwnStudentProfile();
+    final child = await FirebaseDataService.fetchOwnStudentProfile();
     if (child == null) {
       setState(() {
         _busy = false;
-        _error =
-            'Esta conta ainda nao possui um perfil de aluno neste aplicativo.';
+        _error = 'Esta conta ainda nao possui um perfil de aluno no Firebase.';
       });
       return;
     }
-    final localUser = await RemoteSyncService.activateStudent(child);
+    final localUser = await FirebaseDataService.activateStudent(child);
     UserService().addUserFromDb(localUser);
     ProgressoService().setRemoteStudentScope(localUser.username);
     final preferences = await SharedPreferences.getInstance();
@@ -316,7 +312,7 @@ class _StudentAccessPageState extends State<StudentAccessPage> {
     await ProgressoService().carregarDoBanco();
     if (!mounted) return;
 
-    final studentCode = child['student_code'] as String?;
+    final studentCode = child['studentCode'] as String?;
     if (_createAccount && studentCode != null) {
       await _showStudentCodeDialog(studentCode);
     }

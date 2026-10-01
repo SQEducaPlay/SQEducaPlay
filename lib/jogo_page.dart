@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/background_audio_service.dart';
 import 'services/user_service.dart';
 import 'services/quiz_scoring_service.dart';
-import 'services/remote_sync_service.dart';
+import 'services/firebase_data_service.dart';
 
 // Widget para desenhar formas geométricas
 class ShapeWidget extends StatelessWidget {
@@ -755,8 +755,9 @@ class JogoPageState extends State<JogoPage>
           .toList();
       final savedIndex = saved['perguntaAtual'] as int? ?? 0;
       if (savedQuestions.isEmpty ||
-          savedProgress.length != savedQuestions.length)
+          savedProgress.length != savedQuestions.length) {
         return;
+      }
 
       if (mounted) {
         setState(() {
@@ -792,19 +793,21 @@ class JogoPageState extends State<JogoPage>
       if (_bgMusicAllowed) {
         await BackgroundAudioService.instance.init();
         await BackgroundAudioService.instance.playLooped();
-        if (mounted)
+        if (mounted) {
           setState(
             () => _isMusicPlaying = BackgroundAudioService.instance.isPlaying,
           );
+        }
       }
     } catch (_) {
       _bgMusicAllowed = true;
       await BackgroundAudioService.instance.init();
       await BackgroundAudioService.instance.playLooped();
-      if (mounted)
+      if (mounted) {
         setState(
           () => _isMusicPlaying = BackgroundAudioService.instance.isPlaying,
         );
+      }
     }
   }
 
@@ -2050,7 +2053,7 @@ class JogoPageState extends State<JogoPage>
         'data_partida': DateTime.now().toIso8601String(),
         if (currentUser?.remoteStudentId != null) ...{
           'remote_student_id': currentUser!.remoteStudentId,
-          'client_session_id': RemoteSyncService.createClientSessionId(),
+          'client_session_id': FirebaseDataService.createClientSessionId(),
           'remote_synced': 0,
         },
       });
@@ -2083,7 +2086,7 @@ class JogoPageState extends State<JogoPage>
 
       if (currentUser?.remoteStudentId != null) {
         try {
-          await RemoteSyncService.syncPendingSessions(
+          await FirebaseDataService.syncPendingSessions(
             currentUser!.remoteStudentId!,
           );
           if (mounted) {

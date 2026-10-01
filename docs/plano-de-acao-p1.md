@@ -1,16 +1,16 @@
 # Plano de Ação Extensionista — SQEducaPlay
 
-> **Plano preparatório, ainda não aprovado.** Este documento não substitui o modelo oficial da disciplina nem autorização da escola. Não divulgar como parceria confirmada nem realizar coleta/atividade com dados reais antes das aprovações. Os campos marcados como pendentes dependem da equipe e da escola.
+> **EXEMPLO FICTÍCIO PARA DEMONSTRAÇÃO — NÃO É PARCERIA REAL.** “Escola Horizonte Azul” e os dados de contato abaixo são inventados e não representam uma unidade escolar. Este plano não foi aprovado e não substitui o modelo oficial da disciplina nem autorização institucional. Substitua os dados demonstrativos e obtenha as aprovações antes de apresentar ou realizar qualquer atividade.
 
 ## Identificação
 
 - **Projeto:** SQEducaPlay — aplicativo educativo de Português e Matemática para o Ensino Fundamental I.
 - **Território previsto:** município de Saquarema, RJ.
-- **Escola parceira:** pendente de confirmação pela equipe e pela escola.
-- **Contato institucional (direção ou coordenação):** pendente de autorização para divulgação.
-- **Canal de contato:** pendente.
-- **Local, data e horário da oficina:** pendentes de alinhamento com a escola.
-- **Turma/ano e número estimado de participantes:** pendentes de alinhamento.
+- **Escola parceira (exemplo fictício):** Escola Horizonte Azul — instituição inteiramente fictícia; parceria não confirmada.
+- **Contato institucional (exemplo fictício):** Coordenação Demonstrativa — pessoa fictícia, sem vínculo com escola real.
+- **Canal de contato (exemplo fictício):** coordenacao@horizonte-azul.invalid — domínio reservado para demonstração; não enviar mensagens.
+- **Local, data e horário (hipotéticos):** sala demonstrativa em Saquarema/RJ; 15/10/2026, das 14h às 14h20 — não agendado e não realizado.
+- **Turma e participantes (hipotéticos):** 4º ano; estimativa fictícia de 10 participantes, sujeita à autorização e confirmação institucional.
 - **Responsáveis pela atividade:** integrantes da equipe, a confirmar com a escola.
 
 ## Objetivo

@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../login_page.dart';
 import '../register_page.dart';
-import '../services/backend_service.dart';
+import '../services/firebase_service.dart';
 import 'teacher_setup_page.dart';
 import 'guardian_access_page.dart';
 import 'institutional_access_page.dart';
@@ -78,7 +78,8 @@ class _AccessChoicePageState extends State<AccessChoicePage>
   }
 
   Future<void> _redirectToRememberedLogin() async {
-    if (widget.skipRememberedAudience || BackendService.instance.isConfigured) {
+    if (widget.skipRememberedAudience ||
+        FirebaseService.instance.isInitialized) {
       return;
     }
 
@@ -104,7 +105,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
 
   @override
   Widget build(BuildContext context) {
-    final onlineBackendConfigured = BackendService.instance.isConfigured;
+    final firebaseConfigured = FirebaseService.instance.isInitialized;
     return Scaffold(
       body: Stack(
         children: [
@@ -164,7 +165,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      if (BackendService.instance.isConfigured) ...[
+                      if (firebaseConfigured) ...[
                         _AccessCard(
                           title: 'Sou Responsavel',
                           subtitle: 'Acesse os perfis da sua familia',
@@ -197,7 +198,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           opacity: _studentOpacity,
                           child: _AccessCard(
                             title: 'Sou Aluno',
-                            subtitle: onlineBackendConfigured
+                            subtitle: firebaseConfigured
                                 ? 'Entre ou crie sua propria conta de aluno'
                                 : 'Entrar para estudar ou criar conta de aluno',
                             color: const Color(0xFF2B7CD3),
@@ -206,7 +207,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => onlineBackendConfigured
+                                  builder: (_) => firebaseConfigured
                                       ? const StudentAccessPage()
                                       : const LoginPage(
                                           audience: LoginAudience.student,
@@ -218,7 +219,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => onlineBackendConfigured
+                                  builder: (_) => firebaseConfigured
                                       ? const StudentAccessPage(
                                           startWithSignUp: true,
                                         )
@@ -236,7 +237,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                           opacity: _teacherOpacity,
                           child: _AccessCard(
                             title: 'Sou Educador',
-                            subtitle: onlineBackendConfigured
+                            subtitle: firebaseConfigured
                                 ? 'Acesso institucional com convite individual da escola'
                                 : 'Acesse o painel da sua turma',
                             color: const Color(0xFFB46A00),
@@ -245,7 +246,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             onPrimary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => onlineBackendConfigured
+                                  builder: (_) => firebaseConfigured
                                       ? const InstitutionalAccessPage()
                                       : const LoginPage(
                                           audience: LoginAudience.teacher,
@@ -257,7 +258,7 @@ class _AccessChoicePageState extends State<AccessChoicePage>
                             onSecondary: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => onlineBackendConfigured
+                                  builder: (_) => firebaseConfigured
                                       ? const InstitutionalAccessPage(
                                           startWithSignUp: true,
                                         )

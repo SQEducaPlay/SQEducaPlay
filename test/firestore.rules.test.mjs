@@ -222,8 +222,19 @@ test('redeems a teacher invite only with the profile and membership updates toge
       usedBy: null,
     },
   });
+  const unverified = testEnvironment
+    .authenticatedContext('guardian-1', {
+      email: 'teacher@example.com',
+      email_verified: false,
+    })
+    .firestore();
+  await assertFails(getDoc(doc(unverified, 'teacherInvites/SQ-INVITE')));
+
   const db = testEnvironment
-    .authenticatedContext('guardian-1', { email: 'teacher@example.com' })
+    .authenticatedContext('guardian-1', {
+      email: 'teacher@example.com',
+      email_verified: true,
+    })
     .firestore();
   await assertFails(
     updateDoc(doc(db, 'teacherInvites/SQ-INVITE'), {

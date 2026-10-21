@@ -80,6 +80,11 @@ abstract final class FirebaseDataService {
     }
 
     final normalizedEmail = email.trim().toLowerCase();
+    try {
+      await authUser.sendEmailVerification();
+    } catch (_) {
+      // O envio pode ser repetido depois; não bloqueia o cadastro.
+    }
     final profile = _db.collection('users').doc(authUser.uid);
     final emailIndex = _db.collection('emailIndex').doc(normalizedEmail);
     final batch = _db.batch();
@@ -815,6 +820,17 @@ abstract final class FirebaseDataService {
     final uid = _uid();
     final email = _auth.currentUser?.email?.trim().toLowerCase();
     if (email == null) throw StateError('A conta não possui e-mail.');
+    await _auth.currentUser?.reload();
+    if (_auth.currentUser?.emailVerified != true) {
+      try {
+        await _auth.currentUser?.sendEmailVerification();
+      } catch (_) {}
+      await _auth.currentUser?.getIdToken(true);
+      throw StateError(
+        'Confirme seu e-mail pelo link que enviamos e tente novamente.',
+      );
+    }
+    await _auth.currentUser?.getIdToken(true);
     final inviteRef = _db
         .collection('teacherInvites')
         .doc(code.trim().toUpperCase());

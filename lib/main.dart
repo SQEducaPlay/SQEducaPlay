@@ -11,6 +11,10 @@ import 'theme/design_tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kDebugMode) {
+    // Em release, debugPrint ainda escreve no console do navegador.
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
   await FirebaseService.instance.initialize();
   // Supabase remains active during the migration and stays available as backup.
   await BackendService.instance.initialize();

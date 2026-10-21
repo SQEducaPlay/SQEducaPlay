@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function verifiedEmail() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
     function userPath(uid) {
       return /databases/$(database)/documents/users/$(uid);
     }
@@ -390,7 +394,7 @@ service cloud.firestore {
     }
 
     match /teacherInvites/{inviteId} {
-      allow get: if signedIn()
+      allow get: if verifiedEmail()
         && request.auth.token.email == resource.data.email
         && resource.data.usedBy == null
         && resource.data.expiresAt > request.time;
@@ -408,7 +412,7 @@ service cloud.firestore {
         && request.resource.data.usedBy == null
         && request.resource.data.expiresAt > request.time
         && request.resource.data.createdAt == request.time;
-      allow update: if signedIn()
+      allow update: if verifiedEmail()
         && resource.data.usedBy == null
         && resource.data.email == request.auth.token.email
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -423,7 +427,8 @@ service cloud.firestore {
           == inviteId;
       allow delete: if isAdmin()
         || (signedIn()
-          && resource.data.email == request.auth.token.email)
+          && resource.data.email == request.auth.token.email
+          && (verifiedEmail() || resource.data.usedBy == request.auth.uid))
         || hasSchoolRole(resource.data.schoolId, ['school_admin']);
     }
   }
